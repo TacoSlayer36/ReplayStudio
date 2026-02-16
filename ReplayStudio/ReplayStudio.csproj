@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net6\**\*.dll" Private="false" />
+		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net35\**\*.dll" Private="false" />
+		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\**\*.dll" Private="false" />
+		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\ReplayMod.dll" Private="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="assets\replaystudio" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="assets\replaystudio" />
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\$(TargetFileName)&quot;" />
+	</Target>
+
+</Project>
