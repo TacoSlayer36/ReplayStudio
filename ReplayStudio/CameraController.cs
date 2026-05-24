@@ -39,12 +39,10 @@ public static class CameraController
     /// <summary> The camera's move speed for Fly mode, taking framerate into account </summary>
     static float flyCamSpeed => Time.deltaTime * CameraSpeedMult;
 
-    static bool cinematicMode = false;
+    public static bool CinematicMode = false;
 
     /// <summary> Whether the camera in Fly mode is panning </summary>
     static bool isDraggingCam = false;
-
-    //static bool cinematicMode = true;
 
     public static Camera LegacyCamRef => RecordingCamera.Instance?.LegacyCamera;
     public static AudioListener LegacyCamListener;
@@ -196,7 +194,7 @@ public static class CameraController
             combinedRotDelta *= Quaternion.Euler(Vector3.up * mouseX);
         }
 
-        if (cinematicMode)
+        if (CinematicMode)
         {
 
         }

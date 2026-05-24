@@ -1,4 +1,5 @@
-﻿using Il2CppRUMBLE.Utilities;
+﻿using Il2CppExitGames.Client.Photon;
+using Il2CppRUMBLE.Utilities;
 using Il2CppTMPro;
 using MelonLoader;
 using ReplayMod;
@@ -71,7 +72,6 @@ internal static class UIManager
         TransformRefs["PreviousReplay"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnPreviousReplayClicked);
         ReplayMod.Replay.ReplayAPI.onReplaySelected += OnReplaySelected;
         TransformRefs["PlayReplayButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnPlayReplayButtonClicked);
-        
 
         TransformRefs["RenameReplayButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnRenameButtonClicked);
         TransformRefs["CopyFilePathButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnCopyPathButtonClicked);
@@ -80,6 +80,9 @@ internal static class UIManager
         TransformRefs["OffCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOffCamToggled);
         TransformRefs["OrbitCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOrbitCamToggled);
         TransformRefs["FlyCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnFlyCamToggled);
+
+        TransformRefs["FOVInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnFOVInputEdited);
+        TransformRefs["CinematicToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnCinematicToggled);
 
         TransformRefs["PrevFrameButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPrevFrameButtonClicked);
         TransformRefs["PlayButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPlayButtonClicked);
@@ -145,6 +148,24 @@ internal static class UIManager
     static void OnFlyCamToggled(bool toggleState)
     {
         CameraController.SetCameraMode(CameraController.CameraMode.Fly);
+    }
+
+    static void OnFOVInputEdited(string input)
+    {
+        if (float.TryParse(input, out float speed))
+        {
+            CameraController.CameraFOV = speed;
+        }
+    }
+
+    static void OnCinematicToggled(bool toggleState)
+    {
+        CameraController.CinematicMode = toggleState;
+    }
+
+    static void OnOrthographicToggled(bool toggleState)
+    {
+        // TODO
     }
 
     static void OnDeleteReplayButtonClicked()
