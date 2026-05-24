@@ -153,7 +153,7 @@ public static class CameraController
         List<KeyCode> LeftKeys = new List<KeyCode> { KeyCode.A, KeyCode.LeftArrow };
         List<KeyCode> UpKeys = new List<KeyCode> { KeyCode.E, KeyCode.RightControl };
         List<KeyCode> DownKeys = new List<KeyCode> { KeyCode.Q, KeyCode.RightShift };
-        List<KeyCode> SprintKeys = new List<KeyCode> { KeyCode.LeftControl, KeyCode.Return };
+        List<KeyCode> SprintKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.Return };
 
         float sprintMult = IsPressing(SprintKeys) ? 2.25f : 1f; // TODO: Make this configurable
 
