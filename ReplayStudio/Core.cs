@@ -6,84 +6,143 @@ using MelonLoader;
 using UnityEngine;
 using static ReplayStudio.CameraController;
 using ReplayMod;
+using ReplayMod.Replay.Serialization;
+using System.Collections;
+using Microsoft.Diagnostics.Runtime;
+using ReplayStudio.Components;
 
-namespace ReplayStudio
+/* TODO:
+ * Player POV's
+ * Renaming replays
+ * Cinematic camera
+ * FOV Controls
+ * Camera speed controls
+ */
+
+namespace ReplayStudio;
+
+/// <summary>
+/// Contains anything that runs universally as well as overrides for game events
+/// </summary>
+public class Core : MelonMod
 {
-    /// <summary>
-    /// Contains anything that runs universally as well as overrides for game events
-    /// </summary>
-    public class Core : MelonMod
+    /// <summary> Melon singleton for this mod </summary>
+    public static Core Instance;
+    /// <summary> Melon singleton for ReplayMod </summary>
+    public static ReplayMod.Core.Main ReplayModMain;
+
+    internal bool GlobalInit = false;
+    internal int ActiveScene = 0;
+    internal bool IsSceneReady = false;
+
+    /// <summary>Whether the user is viewing replays on the desktop or in VR</summary>
+    public static bool DesktopMode = false;
+    public static float FPS = 30f;
+
+    /// <summary> The mod's parent Game Object in DontDestroyOnLoad </summary>
+    public static GameObject DDOL_GameObjects;
+    public static GameObject LineTemplate;
+
+    internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
+
+    /// <summary></summary>
+    public override void OnLateInitializeMelon()
     {
-        /// <summary> Melon singleton for this mod </summary>
-        public static Core Instance;
-        /// <summary> Melon singleton for ReplayMod </summary>
-        public static ReplayMod.Main ReplayModMain;
+        Instance = this;
+        ReplayModMain = Melon<ReplayMod.Core.Main>.Instance;
+        ReplayMod.Replay.ReplayAPI.onReplayStarted += OnReplayStarted;
+        ReplayMod.Replay.ReplayAPI.onReplayEnded += OnReplayEnded;
+    }
 
-        internal bool GlobalInit = false;
-        internal int ActiveScene = 0;
-        internal bool IsSceneReady = false;
+    /// <summary></summary>
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+    {
+        ActiveScene = buildIndex;
+    }
 
-        /// <summary> The mod's parent Game Object in DontDestroyOnLoad </summary>
-        public GameObject DDOL_GameObjects;
+    /// <summary></summary>
+    public override void OnSceneWasUnloaded(int buildIndex, string sceneName)
+    {
+        IsSceneReady = false;
+    }
 
-        internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
+    /// <summary></summary>
+    public override void OnUpdate()
+    {
+        if (!GlobalInit || !IsSceneReady) return;
 
-        /// <summary></summary>
-        public override void OnLateInitializeMelon()
+        if (Input.GetKeyDown(KeyCode.F1))
         {
-            Instance = this;
-            ReplayModMain = Melon<ReplayMod.Main>.Instance;
+            if (UIManager.CurrentWindowMode is not UIManager.WindowMode.Maximized)
+                UIManager.SetWindowType(UIManager.WindowMode.Maximized);
+            else
+                UIManager.SetWindowType(UIManager.WindowMode.Hidden);
         }
 
-        /// <summary></summary>
-        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+        if (!DesktopMode) return;
+
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            ActiveScene = buildIndex;
+            ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
         }
 
-        /// <summary></summary>
-        public override void OnSceneWasUnloaded(int buildIndex, string sceneName)
-        {
-            IsSceneReady = false;
-        }
-
-        /// <summary></summary>
-        public override void OnUpdate()
-        {
-            if (!GlobalInit || !IsSceneReady) return;
-
-            if (Input.GetKeyDown(KeyCode.T))
-            {
-                if (!CameraController.IsCameraEnabled) CameraController.EnableCamera(CameraMode.Fly);
-                else if (CameraController.CurrentCameraMode == CameraMode.Fly) CameraController.EnableCamera(CameraMode.Orbit);
-                else CameraController.DisableCamera();
-            }
-
+        if (!UIManager.IsHoveringAny)
             CameraController.HandleCamera();
-        }
+    }
 
-        /// <summary>
-        /// Runs when player visuals are generated
-        /// </summary>
-        internal void SceneReady()
-        {
-            if (ActiveScene == 0) return; // Skip the Loader
-            
-            IsSceneReady = true;
-            if (ActiveScene == 1 && !GlobalInit)
-                RunGlobalInit();
-        }
+    public override void OnFixedUpdate()
+    {
+        UIManager.HandleWindow();
 
-        internal void RunGlobalInit()
-        {
-            GlobalInit = true;
-            DDOL_GameObjects = GameObject.Instantiate(GameObjectManager.LoadAssetFromStream<GameObject>(this, "ReplayStudio.assets.replaystudio", "ReplayStudio"));
-            GameObject.DontDestroyOnLoad(DDOL_GameObjects);
+        if (!DesktopMode) return;
 
-            Transform uiRoot = DDOL_GameObjects.transform.Find("Canvas");
-            UIManager.SetUpUI(uiRoot);
+        UIManager.UpdateSpeedInput();
+        UIManager.UpdatePlayPause();
+        TimelineController.Instance.UpdateClipInfos();
+    }
 
-            InitializeCamera();
-        }
+    /// <summary>
+    /// Runs when player visuals are generated
+    /// </summary>
+    internal void SceneReady()
+    {
+        if (ActiveScene == 0) return; // Skip the Loader
+        
+        IsSceneReady = true;
+        if (ActiveScene == 1 && !GlobalInit)
+            RunGlobalInit();
+
+        if (!DesktopMode) return;
+
+        if (CameraController.IsCameraEnabled)
+            SetPlayer(false);
+    }
+
+    internal void RunGlobalInit()
+    {
+        GlobalInit = true;
+        DDOL_GameObjects = GameObject.Instantiate(GameObjectManager.LoadAssetFromStream<GameObject>(this, "ReplayStudio.assets.replaystudio", "ReplayStudio"));
+        GameObject.DontDestroyOnLoad(DDOL_GameObjects);
+
+        Transform uiRoot = DDOL_GameObjects.transform.Find("Canvas");
+        UIManager.SetUpUI(uiRoot);
+
+        LineTemplate = DDOL_GameObjects.transform.Find("LineTemplate").gameObject;
+
+        InitializeCamera();
+    }
+
+    internal void OnReplayStarted(ReplayInfo _)
+    {
+        GameObject timeline = UIManager.TransformRefs["Timeline"].gameObject;
+        timeline.GetComponent<TimelineController>()?.Reset();
+        if (!CameraController.IsCameraEnabled) CameraController.SetCameraMode(CameraMode.Orbit);
+    }
+
+    internal void OnReplayEnded(ReplayInfo _)
+    {
+        TimelineController.Instance.Reset();
+        TimelineController.Instance.ScrollTo(0f, 0.5f, 10f, false);
+        CameraController.DisableCamera();
     }
 }
