@@ -5,6 +5,7 @@ using Il2CppRUMBLE.Utilities;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Il2CppRUMBLE.Managers;
+using System;
 
 namespace ReplayStudio;
 
@@ -16,7 +17,7 @@ public static class CameraController
     /// <summary> Whether to snap the legacy camera to the disembodied location or not </summary>
     public static bool IsCameraEnabled = false;
     /// <summary> FOV to force the Legacy Camera into while it's being snapped to CameraTransform </summary>
-    public static float CameraFOV = 75f; // TODO
+    public static float CameraFOV = 60f; // TODO
     /// <summary> The active way the camera is controlled </summary>
     public static CameraMode CurrentCameraMode = CameraMode.Orbit;
     /// <summary> Two camera control types </summary>
@@ -28,8 +29,30 @@ public static class CameraController
         Fly
     }
 
+    /// <summary>
+    /// Sensitivity
+    /// </summary>
+    public static float ViewSensitivity = 1f;
+
     /// <summary> The Transform on the Game Object representing the transform of the disembodied camera </summary>
     public static Transform CameraTransform;
+
+
+    /// <summary>
+    /// Camera Panning
+    /// </summary>
+    public static Vector2 CameraRot = new Vector2(0f, 90f);
+
+    /// <summary>
+    /// Cinematic camera rotaion accumulator
+    /// </summary>
+    public static Vector2 CameraRotVel;
+
+    /// <summary>
+    /// Cinematic camera motion accumulator
+    /// </summary>
+    public static Vector3 CameraVel;
+
     /// <summary> The camera's speed multiplier; to be applied after frame calculations </summary>
     public static float CameraSpeedMult = 10f; // TODO: Make this configurable
     /// <summary> The location of the camera's origin for Orbit mode </summary>
@@ -101,14 +124,13 @@ public static class CameraController
             Cursor.lockState = CursorLockMode.None;
             isDraggingCam = false;
         }
-
         else if (CurrentCameraMode == CameraMode.Orbit) HandleOrbitCam();
         else if (CurrentCameraMode == CameraMode.Fly) HandleFlyCam();
 
         CameraTransform.localRotation = Quaternion.Euler(CameraTransform.localEulerAngles.x, CameraTransform.localEulerAngles.y, 0f);
     }
 
-    static void HandleOrbitCam()
+    public static void HandleOrbitCam()
     {
         // TODO: I'm sure you can see what's wrong here
         List<KeyCode> PanKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.RightShift };
@@ -142,7 +164,7 @@ public static class CameraController
         CameraTransform.rotation = desiredRot;
     }
 
-    static void HandleFlyCam()
+    public static void HandleFlyCam()
     {
         // TODO: I'm sure you can see what's wrong here
         List<KeyCode> ForwardKeys = new List<KeyCode> { KeyCode.W, KeyCode.UpArrow };
@@ -181,28 +203,48 @@ public static class CameraController
         if (IsPressing(DownKeys))
             verticalMoveAmount += -1f;
 
-        Vector3 combinedPosDelta = lateralMoveDir * flyCamSpeed * sprintMult
+        Vector3 moveAmount = lateralMoveDir * flyCamSpeed * sprintMult
                                   + Vector3.up * verticalMoveAmount * flyCamSpeed * sprintMult;
 
-        Quaternion combinedRotDelta = Quaternion.identity;
-        if (isDraggingCam)
-        {
-            float mouseX = Input.GetAxis("Mouse X") * 10f; // TODO: Make this configurable
-            float mouseY = Input.GetAxis("Mouse Y") * 10f; // TODO: Make this configurable
-
-            combinedRotDelta *= Quaternion.Euler(Vector3.left * mouseY);
-            combinedRotDelta *= Quaternion.Euler(Vector3.up * mouseX);
-        }
+        float mouseX = isDraggingCam ? Input.GetAxis("Mouse X") * ViewSensitivity : 0;
+        float mouseY = isDraggingCam ? Input.GetAxis("Mouse Y") * ViewSensitivity : 0;
 
         if (CinematicMode)
         {
+            // rotation
+            CameraRotVel.y += mouseX * 0.01f;
+            CameraRotVel.x -= mouseY * 0.01f;
 
+            CameraRot.y = (CameraRot.y + CameraRotVel.y * Time.deltaTime * 100f) % 360;
+            CameraRot.x = (float)Math.IEEERemainder(CameraRot.x + CameraRotVel.x * Time.deltaTime * 100f, 360f);
+
+            // auto decel
+            float accelForce = 2f;
+
+            CameraTransform.position += CameraVel * Time.deltaTime;
+
+
+            if (!IsPressing(SprintKeys))
+            {
+                float decelBias = 1f - Math.Max(0, Vector3.Dot(moveAmount, CameraVel.normalized));
+                CameraVel -= CameraVel.normalized * Math.Min(CameraVel.magnitude, Time.deltaTime * accelForce * decelBias);
+            }
+
+            CameraVel += moveAmount * Time.deltaTime * 60f * accelForce;
+
+            CameraRotVel /= 1 + 2 * (0.4f * CameraRotVel.magnitude + 0.8f) * Time.deltaTime;
         }
         else
         {
-            CameraTransform.position += combinedPosDelta;
-            CameraTransform.rotation *= combinedRotDelta;
+            CameraRotVel = new Vector2(0, 0);
+
+            CameraRot.x = Math.Clamp(CameraRot.x - mouseY, -90f, 90f);
+            CameraRot.y = (CameraRot.y + mouseX) % 360;
+
+            CameraTransform.position += moveAmount;
         }
+
+        CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 45f);
     }
 
     /// <summary> Enable the disembodied camera </summary>
