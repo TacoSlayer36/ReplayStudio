@@ -40,6 +40,7 @@ public static class CameraController
     static float flyCamSpeed => Time.deltaTime * CameraSpeedMult;
 
     public static bool CinematicMode = false;
+    public static bool IsOrthographic = false;
 
     /// <summary> Whether the camera in Fly mode is panning </summary>
     static bool isDraggingCam = false;
@@ -277,7 +278,12 @@ public static class CameraController
     {
         LegacyCamRef.transform.position = CameraTransform.position;
         LegacyCamRef.transform.rotation = CameraTransform.rotation;
-        LegacyCamRef.fieldOfView = CameraFOV;
+        LegacyCamRef.orthographic = IsOrthographic;
+
+        if (!IsOrthographic)
+            LegacyCamRef.fieldOfView = CameraFOV;
+        else
+            LegacyCamRef.orthographicSize = CameraFOV;
     }
 
     /// <summary>
@@ -289,6 +295,7 @@ public static class CameraController
         private static LayerMask cullingMask = ~0;
         private static bool useOcclusionCulling = true;
         private static bool isDataStored = false;
+        private static bool orthographic = false;
 
         /// <summary>
         /// Store the input camera's data
@@ -302,6 +309,7 @@ public static class CameraController
             fieldOfView = camera.fieldOfView;
             cullingMask = camera.cullingMask;
             useOcclusionCulling = camera.useOcclusionCulling;
+            orthographic = camera.orthographic;
 
             isDataStored = true;
         }
@@ -320,6 +328,7 @@ public static class CameraController
             camera.fieldOfView = fieldOfView;
             camera.cullingMask = cullingMask;
             camera.useOcclusionCulling = useOcclusionCulling;
+            camera.orthographic = orthographic;
 
             if (clearData) isDataStored = false;
         }

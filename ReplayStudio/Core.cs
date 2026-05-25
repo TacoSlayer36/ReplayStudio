@@ -13,10 +13,10 @@ using ReplayStudio.Components;
 
 /* TODO:
  * Player POV's
- * Renaming replays
- * Cinematic camera
- * FOV Controls
+ * ~Cinematic camera
+ * ~FOV Controls
  * Camera speed controls
+ * Renaming replays
  */
 
 namespace ReplayStudio;
@@ -79,20 +79,21 @@ public class Core : MelonMod
                 UIManager.SetWindowType(UIManager.WindowMode.Hidden);
         }
 
+        if (!UIManager.IsHoveringAny)
+            CameraController.HandleCamera();
+
         if (!DesktopMode) return;
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
             ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
         }
-
-        if (!UIManager.IsHoveringAny)
-            CameraController.HandleCamera();
     }
 
     public override void OnFixedUpdate()
     {
         UIManager.HandleWindow();
+        UIManager.HandleSelectPOV();
 
         if (!DesktopMode) return;
 

@@ -1,4 +1,5 @@
 ﻿using Il2CppExitGames.Client.Photon;
+using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Utilities;
 using Il2CppTMPro;
 using MelonLoader;
@@ -6,6 +7,7 @@ using ReplayMod;
 using ReplayMod.Replay;
 using ReplayMod.Replay.Files;
 using ReplayMod.Replay.Serialization;
+using ReplayMod.Replay.UI;
 using ReplayStudio.Components;
 using System;
 using System.Collections;
@@ -45,6 +47,9 @@ internal static class UIManager
 
     public static bool IsHoveringAny => MouseDetectors.Any(m => m.IsHovering || m.HeldFromHovering);
 
+    public static bool SelectingPOV = false;
+    static PlayerController selectPOVHit = null;
+
     public static void SetUpUI(Transform uiRoot)
     {
         FetchRefsInChildren(uiRoot);
@@ -83,6 +88,7 @@ internal static class UIManager
 
         TransformRefs["FOVInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnFOVInputEdited);
         TransformRefs["CinematicToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnCinematicToggled);
+        TransformRefs["OrthographicToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOrthographicToggled);
 
         TransformRefs["PrevFrameButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPrevFrameButtonClicked);
         TransformRefs["PlayButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPlayButtonClicked);
@@ -105,6 +111,8 @@ internal static class UIManager
         TransformRefs["MinimizeButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnMinimizeButtonClicked);
         TransformRefs["MaximizeButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnMaximizeButtonClicked);
         TransformRefs["HideButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnHideButtonClicked);
+
+        TransformRefs["POVButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPOVButtonClicked);
     }
     static void AddComponents()
     {
@@ -134,7 +142,13 @@ internal static class UIManager
 
     static void OnCopyPathButtonClicked()
     {
-        GUIUtility.systemCopyBuffer = ReplayFiles.explorer.CurrentReplayPath;
+        //GUIUtility.systemCopyBuffer = ReplayFiles.explorer.CurrentReplayPath;
+
+        var path = ReplayFiles.explorer.CurrentReplayPath;
+        if (!string.IsNullOrEmpty(path))
+        {
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+        }
     }
 
     static void OnOffCamToggled(bool toggleState)
@@ -165,7 +179,7 @@ internal static class UIManager
 
     static void OnOrthographicToggled(bool toggleState)
     {
-        // TODO
+        CameraController.IsOrthographic = toggleState;
     }
 
     static void OnDeleteReplayButtonClicked()
@@ -331,6 +345,11 @@ internal static class UIManager
         SetWindowType(WindowMode.Hidden);
     }
 
+    static void OnPOVButtonClicked()
+    {
+        SelectingPOV = !SelectingPOV;
+    }
+
     public static void UpdateSpeedInput()
     {
         if (ReplayMod.Core.Main.Playback?.playbackSpeed != null && TransformRefs.ContainsKey("SpeedInput"))
@@ -373,6 +392,42 @@ internal static class UIManager
                     pos.x = Mathf.Lerp(pos.x, -100f, 0.3f);
                 rct.anchoredPosition = pos;
             }
+        }
+    }
+
+    public static void HandleSelectPOV()
+    {
+        if (!SelectingPOV) return;
+
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, LayerMask.GetMask("PlayerHitbox")))
+        {
+            PlayerController player = hit.collider.GetComponentInParent<PlayerController>();
+            if (player != null)
+            {
+                ReplayMod.Core.ReplayPlayback.povPlayer = player.assignedPlayer;
+                SelectingPOV = false;
+
+                if (selectPOVHit != player)
+                {
+                    Tooltip.ShowOrSetText(player.assignedPlayer.Data.GeneralData.PublicUsername);
+                }
+                selectPOVHit = player;
+            }
+        }
+        else
+        {
+            if (selectPOVHit != null)
+            {
+                Tooltip.Hide();
+            }
+            selectPOVHit = null;
+        }
+
+        if (Input.GetMouseButton(0))
+        {
+            SelectingPOV = false;
+            Tooltip.Hide();
         }
     }
 
