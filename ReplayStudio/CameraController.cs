@@ -54,14 +54,12 @@ public static class CameraController
     public static Vector3 CameraVel;
 
     /// <summary> The camera's speed multiplier; to be applied after frame calculations </summary>
-    public static float CameraSpeedMult = 10f; // TODO: Make this configurable
+    public static float CameraSpeedMult = 1f;
     /// <summary> The location of the camera's origin for Orbit mode </summary>
     public static Vector3 OrbitCamFocus = Vector3.zero;
     /// <summary> The camera's distance from its rotation origin for Orbit mode </summary>
     public static float OrbitCamDist = 5f;
-    /// <summary> The camera's move speed for Fly mode, taking framerate into account </summary>
-    static float flyCamSpeed => Time.deltaTime * CameraSpeedMult;
-
+    /// <summary> Smooth Camera motion and rotation </summary>
     public static bool CinematicMode = false;
 
     /// <summary> Whether the camera in Fly mode is panning </summary>
@@ -192,6 +190,11 @@ public static class CameraController
         if (IsPressing(LeftKeys))
             moveDir += -CameraTransform.transform.right;
 
+        if (Input.mouseScrollDelta.y != 0 )
+        {
+            CameraSpeedMult = Mathf.Pow(10, Math.Clamp(Mathf.Log(CameraSpeedMult, 10) + Input.mouseScrollDelta.y * 0.05f, -1, 0.75f));
+        }
+
         Vector3 lateralMoveDir = new Vector3(moveDir.x, 0f, moveDir.z).normalized;
 
         // Vertical movement is based in world space
@@ -203,8 +206,7 @@ public static class CameraController
         if (IsPressing(DownKeys))
             verticalMoveAmount += -1f;
 
-        Vector3 moveAmount = lateralMoveDir * flyCamSpeed * sprintMult
-                                  + Vector3.up * verticalMoveAmount * flyCamSpeed * sprintMult;
+        Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
 
         float mouseX = isDraggingCam ? Input.GetAxis("Mouse X") * ViewSensitivity : 0;
         float mouseY = isDraggingCam ? Input.GetAxis("Mouse Y") * ViewSensitivity : 0;
@@ -221,16 +223,15 @@ public static class CameraController
             // auto decel
             float accelForce = 2f;
 
-            CameraTransform.position += CameraVel * Time.deltaTime;
-
+            CameraTransform.position += CameraVel * Time.deltaTime * CameraSpeedMult;
 
             if (!IsPressing(SprintKeys))
             {
-                float decelBias = 1f - Math.Max(0, Vector3.Dot(moveAmount, CameraVel.normalized));
-                CameraVel -= CameraVel.normalized * Math.Min(CameraVel.magnitude, Time.deltaTime * accelForce * decelBias);
+                float decelBias = 1f - Math.Max(0, Vector3.Dot(moveAmount.normalized, CameraVel.normalized));
+                CameraVel -= CameraVel.normalized * Math.Min(CameraVel.magnitude, Time.deltaTime * accelForce * decelBias * CameraSpeedMult);
             }
 
-            CameraVel += moveAmount * Time.deltaTime * 60f * accelForce;
+            CameraVel += moveAmount * (accelForce * sprintMult * CameraSpeedMult * Time.deltaTime);
 
             CameraRotVel /= 1 + 2 * (0.4f * CameraRotVel.magnitude + 0.8f) * Time.deltaTime;
         }
@@ -241,7 +242,7 @@ public static class CameraController
             CameraRot.x = Math.Clamp(CameraRot.x - mouseY, -90f, 90f);
             CameraRot.y = (CameraRot.y + mouseX) % 360;
 
-            CameraTransform.position += moveAmount;
+            CameraTransform.position += moveAmount * (sprintMult * CameraSpeedMult * 6f * Time.deltaTime);
         }
 
         CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 45f);
