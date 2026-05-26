@@ -1,9 +1,12 @@
 ﻿using Il2CppExitGames.Client.Photon;
+using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Utilities;
+using Il2CppSteamworks;
 using Il2CppTMPro;
 using MelonLoader;
 using ReplayMod;
+using ReplayMod.Core;
 using ReplayMod.Replay;
 using ReplayMod.Replay.Files;
 using ReplayMod.Replay.Serialization;
@@ -14,6 +17,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.PlayerLoop;
 using UnityEngine.UI;
 
@@ -47,8 +51,7 @@ internal static class UIManager
 
     public static bool IsHoveringAny => MouseDetectors.Any(m => m.IsHovering || m.HeldFromHovering);
 
-    public static bool SelectingPOV = false;
-    static PlayerController selectPOVHit = null;
+    public static bool ViewingOtherPOV => ReplayPlayback.povPlayer != null && ReplayPlayback.povPlayer != PlayerManager.Instance?.LocalPlayer;
 
     public static void SetUpUI(Transform uiRoot)
     {
@@ -73,46 +76,48 @@ internal static class UIManager
     }
     static void AddListeners()
     {
-        TransformRefs["NextReplay"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnNextReplayClicked);
-        TransformRefs["PreviousReplay"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnPreviousReplayClicked);
+        TransformRefs["NextReplay"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnNextReplayClicked);
+        TransformRefs["PreviousReplay"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnPreviousReplayClicked);
         ReplayMod.Replay.ReplayAPI.onReplaySelected += OnReplaySelected;
-        TransformRefs["PlayReplayButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnPlayReplayButtonClicked);
+        TransformRefs["PlayReplayButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnPlayReplayButtonClicked);
 
-        TransformRefs["RenameReplayButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnRenameButtonClicked);
-        TransformRefs["CopyFilePathButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnCopyPathButtonClicked);
-        TransformRefs["DeleteReplayButton"].GetComponent<Button>()?.onClick.AddListener((System.Action)OnDeleteReplayButtonClicked);
+        TransformRefs["RenameReplayButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnRenameButtonClicked);
+        TransformRefs["CopyFilePathButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnCopyPathButtonClicked);
+        TransformRefs["DeleteReplayButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnDeleteReplayButtonClicked);
 
-        TransformRefs["OffCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOffCamToggled);
-        TransformRefs["OrbitCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOrbitCamToggled);
-        TransformRefs["FlyCamToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnFlyCamToggled);
+        TransformRefs["OffCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOffCamToggled);
+        TransformRefs["OrbitCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrbitCamToggled);
+        TransformRefs["FlyCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnFlyCamToggled);
+        TransformRefs["POVCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnPOVCamToggled);
 
-        TransformRefs["FOVInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnFOVInputEdited);
-        TransformRefs["CinematicToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnCinematicToggled);
-        TransformRefs["OrthographicToggle"].GetComponent<Toggle>()?.onValueChanged.AddListener((System.Action<bool>)OnOrthographicToggled);
+        TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnFOVInputEdited);
+        TransformRefs["CinematicToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnCinematicToggled);
+        TransformRefs["OrthographicToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrthographicToggled);
 
-        TransformRefs["PrevFrameButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPrevFrameButtonClicked);
-        TransformRefs["PlayButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPlayButtonClicked);
-        TransformRefs["PlayReverseButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPlayReverseButtonClicked);
-        TransformRefs["NextFrameButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnNextFrameButtonClicked);
-        TransformRefs["PauseButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPauseButtonClicked);
+        TransformRefs["PrevFrameButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPrevFrameButtonClicked);
+        TransformRefs["PlayButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPlayButtonClicked);
+        TransformRefs["PlayReverseButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPlayReverseButtonClicked);
+        TransformRefs["NextFrameButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnNextFrameButtonClicked);
+        TransformRefs["PauseButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPauseButtonClicked);
 
-        TransformRefs["FineFastButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnFineFastClicked);
-        TransformRefs["CoarseFastButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnCoarseFastClicked);
-        TransformRefs["SpeedInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnSpeedInputEdited);
-        TransformRefs["FineSlowButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnFineSlowClicked);
-        TransformRefs["CoarseSlowButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnCoarseSlowClicked);
+        TransformRefs["FineFastButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnFineFastClicked);
+        TransformRefs["CoarseFastButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnCoarseFastClicked);
+        TransformRefs["SpeedInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnSpeedInputEdited);
+        TransformRefs["FineSlowButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnFineSlowClicked);
+        TransformRefs["CoarseSlowButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnCoarseSlowClicked);
 
-        TransformRefs["DurationInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnDurationInputEdited);
-        TransformRefs["FrameInput"].GetComponent<TMP_InputField>().onEndEdit.AddListener((System.Action<string>)OnFrameInputEdited);
+        TransformRefs["DurationInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnDurationInputEdited);
+        TransformRefs["FrameInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnFrameInputEdited);
 
-        TransformRefs["StopReplayButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnStopReplayButtonClicked);
-        TransformRefs["ExitMapButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnExitMapButtonClicked);
+        TransformRefs["StopReplayButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnStopReplayButtonClicked);
+        TransformRefs["ExitMapButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnExitMapButtonClicked);
 
-        TransformRefs["MinimizeButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnMinimizeButtonClicked);
-        TransformRefs["MaximizeButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnMaximizeButtonClicked);
-        TransformRefs["HideButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnHideButtonClicked);
+        TransformRefs["MinimizeButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnMinimizeButtonClicked);
+        TransformRefs["MaximizeButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnMaximizeButtonClicked);
+        TransformRefs["HideButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnHideButtonClicked);
 
-        TransformRefs["POVButton"].GetComponent<Button>().onClick.AddListener((System.Action)OnPOVButtonClicked);
+        TransformRefs["PrevPOVButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPrevPOVButtonClicked);
+        TransformRefs["NextPOVButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnNextPOVButtonClicked);
     }
     static void AddComponents()
     {
@@ -164,11 +169,26 @@ internal static class UIManager
         CameraController.SetCameraMode(CameraController.CameraMode.Fly);
     }
 
+    static void OnPOVCamToggled(bool toggleState)
+    {
+        CameraController.SetCameraMode(CameraController.CameraMode.POV);
+    }
+
     static void OnFOVInputEdited(string input)
     {
-        if (float.TryParse(input, out float speed))
+        if (float.TryParse(input, out float fov))
         {
-            CameraController.CameraFOV = speed;
+            if (!CameraController.IsOrthographic)
+            {
+                if (!ViewingOtherPOV)
+                    CameraController.CameraFOV = fov;
+                else
+                    RecordingCamera.instance.fovSlider.value = fov;
+            }
+            else
+            {
+                CameraController.CameraSize = fov;
+            }
         }
     }
 
@@ -345,9 +365,14 @@ internal static class UIManager
         SetWindowType(WindowMode.Hidden);
     }
 
-    static void OnPOVButtonClicked()
+    static void OnPrevPOVButtonClicked()
     {
-        SelectingPOV = !SelectingPOV;
+        CameraController.SelectPOVPlayer(true);
+    }
+
+    static void OnNextPOVButtonClicked()
+    {
+        CameraController.SelectPOVPlayer(false);
     }
 
     public static void UpdateSpeedInput()
@@ -367,6 +392,57 @@ internal static class UIManager
         if (ReplayMod.Core.Main.Playback?.isPaused != null && TransformRefs.ContainsKey("PauseButton"))
         {
             TransformRefs["PauseButton"]?.gameObject?.SetActive(!ReplayMod.Core.Main.Playback.isPaused);
+        }
+    }
+
+    public static void UpdateFOVInput()
+    {
+        if (TransformRefs.ContainsKey("FOVInput"))
+        {
+            TMP_InputField field = TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>();
+            if (field == null || field.isFocused) return;
+
+            if (!CameraController.IsOrthographic)
+            {
+                if (ViewingOtherPOV)
+                {
+                    float legacyFOV = RecordingCamera.instance.fovSlider.value;
+                    field.SetTextWithoutNotify(legacyFOV.ToString("0.##"));
+                }
+                else
+                {
+                    field.SetTextWithoutNotify(CameraController.CameraFOV.ToString("0.##"));
+                }
+            }
+            else
+            {
+                field.SetTextWithoutNotify(CameraController.CameraSize.ToString("0.##"));
+            }
+
+            if (CameraController.IsOrthographic)
+                TransformRefs["FOVText"].GetComponent<TextMeshProUGUI>().text = "Size";
+            else
+                TransformRefs["FOVText"].GetComponent<TextMeshProUGUI>().text = "FOV";
+        }
+    }
+
+    public static void UpdatePOVSelector()
+    {
+        RectTransform povPanel = TransformRefs["POVSelector"].GetComponent<RectTransform>();
+
+        if (CameraController.CurrentCameraMode is CameraController.CameraMode.POV && CameraController.IsCameraEnabled)
+        {
+            Vector2 pos = povPanel.anchoredPosition;
+            pos.y = Mathf.Lerp(pos.y, -157f, 0.5f);
+            povPanel.anchoredPosition = pos;
+
+            TransformRefs["POVPlayerText"].GetComponent<TextMeshProUGUI>().text = ReplayPlayback.povPlayer.Data.GeneralData.PublicUsername;
+        }
+        else
+        {
+            Vector2 pos = povPanel.anchoredPosition;
+            pos.y = Mathf.Lerp(pos.y, -95f, 0.5f);
+            povPanel.anchoredPosition = pos;
         }
     }
 
@@ -395,41 +471,47 @@ internal static class UIManager
         }
     }
 
-    public static void HandleSelectPOV()
-    {
-        if (!SelectingPOV) return;
+    //public static void HandleSelectPOV()
+    //{
+    //    if (!SelectingPOV) return;
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, LayerMask.GetMask("PlayerHitbox")))
-        {
-            PlayerController player = hit.collider.GetComponentInParent<PlayerController>();
-            if (player != null)
-            {
-                ReplayMod.Core.ReplayPlayback.povPlayer = player.assignedPlayer;
-                SelectingPOV = false;
+    //    CameraController.SnapLegacyCam();
+    //    Ray ray = CameraController.LegacyCamRef.ScreenPointToRay(Input.mousePosition);
+    //    if (Physics.Raycast(ray, out RaycastHit hit, 100f, LayerMask.GetMask("PlayerHitbox")))
+    //    {
+    //        PlayerController player = hit.collider.GetComponentInParent<PlayerController>();
+    //        if (player != null)
+    //        {
+    //            if (selectPOVHit != player)
+    //            {
+    //                Tooltip.ShowOrSetText(player.assignedPlayer.Data.GeneralData.PublicUsername);
+    //            }
+    //            selectPOVHit = player;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        if (selectPOVHit != null)
+    //        {
+    //            Tooltip.Hide();
+    //        }
+    //        selectPOVHit = null;
+    //    }
 
-                if (selectPOVHit != player)
-                {
-                    Tooltip.ShowOrSetText(player.assignedPlayer.Data.GeneralData.PublicUsername);
-                }
-                selectPOVHit = player;
-            }
-        }
-        else
-        {
-            if (selectPOVHit != null)
-            {
-                Tooltip.Hide();
-            }
-            selectPOVHit = null;
-        }
+    //    if (Input.GetMouseButtonDown(0))
+    //    {
+    //        SelectingPOV = false;
+    //        Tooltip.Hide();
+    //        UIManager.SetWindowType(WindowMode.Maximized);
 
-        if (Input.GetMouseButton(0))
-        {
-            SelectingPOV = false;
-            Tooltip.Hide();
-        }
-    }
+    //        if (selectPOVHit != null)
+    //        {
+    //            ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(selectPOVHit.assignedPlayer);
+    //            CameraController.DisableCamera();
+    //            CameraController.SetPlayer(false);
+    //        }
+    //    }
+    //}
 
     public static void SetWindowType(WindowMode windowMode)
     {

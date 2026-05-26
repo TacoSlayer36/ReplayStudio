@@ -5,6 +5,8 @@ using Il2CppRUMBLE.Utilities;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Il2CppRUMBLE.Managers;
+using ReplayMod.Core;
+using Il2CppRUMBLE.Players;
 
 namespace ReplayStudio;
 
@@ -16,7 +18,8 @@ public static class CameraController
     /// <summary> Whether to snap the legacy camera to the disembodied location or not </summary>
     public static bool IsCameraEnabled = false;
     /// <summary> FOV to force the Legacy Camera into while it's being snapped to CameraTransform </summary>
-    public static float CameraFOV = 75f; // TODO
+    public static float CameraFOV = 75f;
+    public static float CameraSize = 10f;
     /// <summary> The active way the camera is controlled </summary>
     public static CameraMode CurrentCameraMode = CameraMode.Orbit;
     /// <summary> Two camera control types </summary>
@@ -25,8 +28,11 @@ public static class CameraController
         /// <summary> The camera will be moved with an orbiting style, similar to Blender </summary>
         Orbit,
         /// <summary> The camera will be moved with a flight style, similar to Minecraft creative mode </summary>
-        Fly
+        Fly,
+        POV
     }
+
+    static Player selectedPOVPlayer;
 
     /// <summary> The Transform on the Game Object representing the transform of the disembodied camera </summary>
     public static Transform CameraTransform;
@@ -212,6 +218,8 @@ public static class CameraController
     {
         IsCameraEnabled = true;
 
+        ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
+
         if (mode != null)
             SetCameraMode((CameraMode)mode);
     }
@@ -228,6 +236,9 @@ public static class CameraController
         updateCameraModeUI();
 
         SetPlayer(true);
+
+        if (ReplayMod.Replay.ReplayAPI.IsPlaying)
+            ReplayMod.Core.Main.Playback?.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
     }
 
     /// <summary> Set the camera's active control system </summary>
@@ -243,6 +254,43 @@ public static class CameraController
         updateCameraModeUI();
 
         SetPlayer(false);
+
+        if (mode is not CameraMode.POV)
+        {
+            ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
+        }
+        else
+        {
+            if (selectedPOVPlayer == null || selectedPOVPlayer == PlayerManager.Instance.LocalPlayer) SelectPOVPlayer(false);
+            ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(selectedPOVPlayer);
+        }
+    }
+
+    public static void SelectPOVPlayer(bool previous)
+    {
+        List<Player> candidates = new();
+        foreach (var player in PlayerManager.Instance.AllPlayers)
+            if (player != PlayerManager.Instance.LocalPlayer) candidates.Add(player);
+
+        if (candidates.Count == 0)
+        {
+            selectedPOVPlayer = PlayerManager.Instance.LocalPlayer;
+            return;
+        }
+
+        int index = 0;
+        if (selectedPOVPlayer != null)
+        {
+            index = candidates.IndexOf(selectedPOVPlayer);
+            if (!previous)
+                index = (index + 1) % candidates.Count;
+            else
+                index = (index - 1) % candidates.Count;
+        }
+
+        selectedPOVPlayer = candidates[index];
+
+        ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(selectedPOVPlayer);
     }
 
     public static void SetPlayer(bool enabled)
@@ -260,13 +308,16 @@ public static class CameraController
         Toggle offToggle = UIManager.TransformRefs["OffCamToggle"].GetComponent<Toggle>();
         Toggle orbitToggle = UIManager.TransformRefs["OrbitCamToggle"].GetComponent<Toggle>();
         Toggle flyToggle = UIManager.TransformRefs["FlyCamToggle"].GetComponent<Toggle>();
+        Toggle povToggle = UIManager.TransformRefs["POVCamToggle"].GetComponent<Toggle>();
 
         offToggle.SetIsOnWithoutNotify(false);
         orbitToggle.SetIsOnWithoutNotify(false);
         flyToggle.SetIsOnWithoutNotify(false);
+        povToggle.SetIsOnWithoutNotify(false);
 
         if (IsCameraEnabled && CurrentCameraMode is CameraMode.Orbit) orbitToggle.SetIsOnWithoutNotify(true);
         else if (IsCameraEnabled && CurrentCameraMode is CameraMode.Fly) flyToggle.SetIsOnWithoutNotify(true);
+        else if (IsCameraEnabled && CurrentCameraMode is CameraMode.POV) povToggle.SetIsOnWithoutNotify(true);
         else offToggle.SetIsOnWithoutNotify(true);
     }
 
@@ -276,14 +327,15 @@ public static class CameraController
     /// </summary>
     public static void SnapLegacyCam()
     {
+        LegacyCamRef.orthographic = IsOrthographic;
+        LegacyCamRef.orthographicSize = CameraSize;
+
+        if (CameraController.CurrentCameraMode is CameraController.CameraMode.POV) return;
+
         LegacyCamRef.transform.position = CameraTransform.position;
         LegacyCamRef.transform.rotation = CameraTransform.rotation;
-        LegacyCamRef.orthographic = IsOrthographic;
 
-        if (!IsOrthographic)
-            LegacyCamRef.fieldOfView = CameraFOV;
-        else
-            LegacyCamRef.orthographicSize = CameraFOV;
+        LegacyCamRef.fieldOfView = CameraFOV;
     }
 
     /// <summary>

@@ -82,8 +82,6 @@ public class Core : MelonMod
         if (!UIManager.IsHoveringAny)
             CameraController.HandleCamera();
 
-        if (!DesktopMode) return;
-
         if (Input.GetKeyDown(KeyCode.Space))
         {
             ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
@@ -93,12 +91,13 @@ public class Core : MelonMod
     public override void OnFixedUpdate()
     {
         UIManager.HandleWindow();
-        UIManager.HandleSelectPOV();
 
         if (!DesktopMode) return;
 
         UIManager.UpdateSpeedInput();
         UIManager.UpdatePlayPause();
+        UIManager.UpdateFOVInput();
+        UIManager.UpdatePOVSelector();
         TimelineController.Instance.UpdateClipInfos();
     }
 
