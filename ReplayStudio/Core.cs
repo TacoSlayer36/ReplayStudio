@@ -12,18 +12,15 @@ using Microsoft.Diagnostics.Runtime;
 using ReplayStudio.Components;
 
 /* TODO:
- * Player POV's
- * ~Cinematic camera
- * ~FOV Controls
- * Camera speed controls
- * Renaming replays
+ * Crystals
+ * ~Camera speed controls
  */
 
 namespace ReplayStudio;
 
 /// <summary>
 /// Contains anything that runs universally as well as overrides for game events
-/// </summary>
+/// </summary>B
 public class Core : MelonMod
 {
     /// <summary> Melon singleton for this mod </summary>
@@ -98,6 +95,8 @@ public class Core : MelonMod
         UIManager.UpdatePlayPause();
         UIManager.UpdateFOVInput();
         UIManager.UpdatePOVSelector();
+        UIManager.UpdateDOFSettings();
+        UIManager.UpdateRename();
         TimelineController.Instance.UpdateClipInfos();
     }
 

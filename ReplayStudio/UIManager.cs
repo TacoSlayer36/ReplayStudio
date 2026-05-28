@@ -1,4 +1,5 @@
 ﻿using Il2CppExitGames.Client.Photon;
+using Il2CppPlayFab.ClientModels;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppRUMBLE.Utilities;
@@ -15,10 +16,14 @@ using ReplayStudio.Components;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.PlayerLoop;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace ReplayStudio;
@@ -53,6 +58,8 @@ internal static class UIManager
 
     public static bool ViewingOtherPOV => ReplayPlayback.povPlayer != null && ReplayPlayback.povPlayer != PlayerManager.Instance?.LocalPlayer;
 
+    static bool isRenaming = false;
+
     public static void SetUpUI(Transform uiRoot)
     {
         FetchRefsInChildren(uiRoot);
@@ -64,6 +71,8 @@ internal static class UIManager
         PopoutHoverMD = TransformRefs["PopoutHover"]?.GetComponent<MouseDetector>();
         TransformRefs["Editor"].gameObject.SetActive(false);
         TimelineController.Instance.ScrollTo(0f, 0.5f, 10f, false);
+
+        CameraController.DOFComponent = Core.DDOL_GameObjects.transform.GetChild(1).GetComponent<Volume>();
     }
     static void FetchRefsInChildren(Transform parent)
     {
@@ -85,14 +94,23 @@ internal static class UIManager
         TransformRefs["CopyFilePathButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnCopyPathButtonClicked);
         TransformRefs["DeleteReplayButton"]?.GetComponent<Button>()?.onClick?.AddListener((System.Action)OnDeleteReplayButtonClicked);
 
+        TransformRefs["RenameInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnRenameInputEdited);
+        TransformRefs["RenameInput"]?.GetComponent<TMP_InputField>().onSubmit?.AddListener((System.Action<string>)OnRenameInputSubmitted);
+
         TransformRefs["OffCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOffCamToggled);
         TransformRefs["OrbitCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrbitCamToggled);
         TransformRefs["FlyCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnFlyCamToggled);
         TransformRefs["POVCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnPOVCamToggled);
 
         TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnFOVInputEdited);
+        TransformRefs["DOFToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnDOFToggled);
         TransformRefs["CinematicToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnCinematicToggled);
         TransformRefs["OrthographicToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrthographicToggled);
+
+        TransformRefs["DOFStrengthInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnDOFStrengthInputEdited);
+        TransformRefs["DOFDistanceInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnDOFDistanceInputEdited);
+        TransformRefs["DOFStrengthSlider"]?.GetComponent<Slider>()?.onValueChanged?.AddListener((System.Action<float>)OnDOFStrengthSliderEdited);
+        TransformRefs["DOFDistanceSlider"]?.GetComponent<Slider>()?.onValueChanged?.AddListener((System.Action<float>)OnDOFDistanceSliderEdited);
 
         TransformRefs["PrevFrameButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPrevFrameButtonClicked);
         TransformRefs["PlayButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPlayButtonClicked);
@@ -142,7 +160,7 @@ internal static class UIManager
 
     static void OnRenameButtonClicked()
     {
-        
+        isRenaming = !isRenaming;
     }
 
     static void OnCopyPathButtonClicked()
@@ -192,6 +210,12 @@ internal static class UIManager
         }
     }
 
+    static void OnDOFToggled(bool toggleState)
+    {
+        CameraController.DoDepthOfField = !CameraController.DoDepthOfField;
+        CameraController.DOFComponent.gameObject.SetActive(toggleState);
+    }
+
     static void OnCinematicToggled(bool toggleState)
     {
         CameraController.CinematicMode = toggleState;
@@ -200,6 +224,62 @@ internal static class UIManager
     static void OnOrthographicToggled(bool toggleState)
     {
         CameraController.IsOrthographic = toggleState;
+    }
+
+    static void OnDOFStrengthInputEdited(string input)
+    {
+        input = Regex.Match(input, "[\\d.]+").Value;
+        if (float.TryParse(input, out float f))
+        {
+            CameraController.DOFStrength = f;
+            TransformRefs["DOFStrengthSlider"].GetComponent<Slider>().value = f;
+            TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + CameraController.DOFStrength.ToString("0.##"));
+
+            if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+            {
+                dof.aperture.value = f;
+            }
+        }
+    }
+
+    static void OnDOFDistanceInputEdited(string input)
+    {
+        input = Regex.Match(input, "[\\d.]+").Value;
+        if (float.TryParse(input, out float f))
+        {
+            CameraController.DOFDistance = f;
+            TransformRefs["DOFDistanceSlider"].GetComponent<Slider>().value = f;
+            TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(CameraController.DOFDistance.ToString("0.#"));
+        }
+
+        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        {
+            dof.focusDistance.value = f;
+        }
+    }
+
+    static void OnDOFStrengthSliderEdited(float value)
+    {
+        CameraController.DOFStrength = value;
+        TransformRefs["DOFStrengthSlider"].GetComponent<Slider>().value = value;
+        TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + CameraController.DOFStrength.ToString("0.#"));
+
+        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        {
+            dof.aperture.value = value;
+        }
+    }
+
+    static void OnDOFDistanceSliderEdited(float value)
+    {
+        CameraController.DOFDistance = value;
+        TransformRefs["DOFDistanceSlider"].GetComponent<Slider>().value = value;
+        TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(CameraController.DOFDistance.ToString("0.##") + "M");
+
+        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        {
+            dof.focusDistance.value = value;
+        }
     }
 
     static void OnDeleteReplayButtonClicked()
@@ -218,6 +298,38 @@ internal static class UIManager
         }
     }
 
+    static void OnRenameInputEdited(string input)
+    {
+        input = input.Trim();
+        if (string.IsNullOrEmpty(input))
+        {
+            ReplayMod.Core.Main.ReplayError($"Invalid replay name ({input})", CameraController.LegacyCamRef.transform.position);
+            return;
+        }
+
+        string dir = ReplayMod.Replay.ReplayAPI.CurrentFolder;
+        string newPath = Path.Combine(dir, input + ".replay");
+
+        if (File.Exists(newPath))
+        {
+            ReplayMod.Core.Main.ReplayError($"Name already exists ({newPath})", CameraController.LegacyCamRef.transform.position);
+            return;
+        }
+
+        File.Move(ReplayMod.Replay.ReplayAPI.SelectedEntry.FullPath, newPath);
+        Core.ReplayModMain.replaySettings.Show(newPath);
+        OnReplaySelected(ReplayAPI.SelectedEntry, "");
+
+        ReplayFiles.ReloadReplays();
+
+        AudioManager.instance.Play(ReplayCache.SFX["Call_PoseGhost_MovePerformed"], CameraController.LegacyCamRef.transform.position);
+    }
+
+    static void OnRenameInputSubmitted(string input)
+    {
+        isRenaming = false;
+    }
+
     static void OnReplaySelected(ReplayExplorer.Entry entry, string _)
     {
         var count = ReplayFiles.explorer.currentReplayEntries.Count(e => !e.IsFolder);
@@ -229,6 +341,7 @@ internal static class UIManager
         if (entry == null || index < 0)
         {
             TransformRefs["ReplayMetadataText"].GetComponent<TextMeshProUGUI>().text = "";
+            TransformRefs["ReplayTitle"].GetComponent<TextMeshProUGUI>().text = "No Replay Selected";
             TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = "No Replay Selected";
             TransformRefs["ReplayIndex"].GetComponent<TextMeshProUGUI>().text = "";
             TransformRefs["TimelinePreview"]?.GetComponent<TimelinePreview>()?.ClearMarkers();
@@ -236,7 +349,8 @@ internal static class UIManager
         else
         {
             TransformRefs["ReplayMetadataText"].GetComponent<TextMeshProUGUI>().text = ReplayAPI.FormatReplayTemplate(ReplayFiles.GetMetadataFormat(entry.header.Scene), entry.header);
-            TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = entry.header.Title;
+            TransformRefs["ReplayTitle"].GetComponent<TextMeshProUGUI>().text = entry.header.Title;
+            TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = entry.Name;
             TransformRefs["ReplayIndex"].GetComponent<TextMeshProUGUI>().text = $"{shownIndex} / {count}";
         }
 
@@ -253,14 +367,14 @@ internal static class UIManager
 
     public static void OnPlayButtonClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed);
         ReplayMod.Core.Main.Playback.TogglePlayback(true);
+        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed);
     }
 
     public static void OnPlayReverseButtonClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed) * -1f;
         ReplayMod.Core.Main.Playback.TogglePlayback(true);
+        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed) * -1f;
     }
 
     public static void OnPauseButtonClicked()
@@ -444,6 +558,53 @@ internal static class UIManager
             pos.y = Mathf.Lerp(pos.y, -95f, 0.5f);
             povPanel.anchoredPosition = pos;
         }
+    }
+
+    public static void UpdateDOFSettings()
+    {
+        RectTransform povPanel = TransformRefs["DOFSettings"].GetComponent<RectTransform>();
+
+        if (CameraController.DoDepthOfField)
+        {
+            Vector2 pos = povPanel.anchoredPosition;
+            pos.x = Mathf.Lerp(pos.x, 10f, 0.5f);
+            povPanel.anchoredPosition = pos;
+            povPanel.gameObject.SetActive(true);
+        }
+        else
+        {
+            Vector2 pos = povPanel.anchoredPosition;
+            pos.x = Mathf.Lerp(pos.x, 420f, 0.5f);
+            povPanel.anchoredPosition = pos;
+            if (pos.x >= 419f) povPanel.gameObject.SetActive(false);
+        }
+    }
+
+    public static void UpdateRename()
+    {
+        RectTransform renamePanel = TransformRefs["RenameArea"].GetComponent<RectTransform>();
+
+        if (isRenaming)
+        {
+            Vector2 pos = renamePanel.anchoredPosition;
+            pos.y = Mathf.Lerp(pos.y, 10f, 0.5f);
+            renamePanel.anchoredPosition = pos;
+        }
+        else
+        {
+            Vector2 pos = renamePanel.anchoredPosition;
+            pos.y = Mathf.Lerp(pos.y, 98f, 0.5f);
+            renamePanel.anchoredPosition = pos;
+        }
+
+        string selectedEntry = ReplayMod.Replay.ReplayAPI.SelectedEntry?.Name;
+
+        TMP_InputField field = TransformRefs["RenameInput"]?.GetComponent<TMP_InputField>();
+        if (field != null && !field.isFocused)
+        {
+            field.text = selectedEntry ?? "No Replay Selected";
+        }
+        field.interactable = (selectedEntry != null);
     }
 
     public static void HandleWindow()

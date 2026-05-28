@@ -7,6 +7,9 @@ using UnityEngine.UI;
 using Il2CppRUMBLE.Managers;
 using ReplayMod.Core;
 using Il2CppRUMBLE.Players;
+using System;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace ReplayStudio;
 
@@ -34,19 +37,45 @@ public static class CameraController
 
     static Player selectedPOVPlayer;
 
+    /// <summary>
+    /// Sensitivity
+    /// </summary>
+    public static float ViewSensitivity = 2f;
+
     /// <summary> The Transform on the Game Object representing the transform of the disembodied camera </summary>
     public static Transform CameraTransform;
+
+
+    /// <summary>
+    /// Camera Panning
+    /// </summary>
+    public static Vector2 CameraRot = new Vector2(0f, 90f);
+
+    /// <summary>
+    /// Cinematic camera rotaion accumulator
+    /// </summary>
+    public static Vector2 CameraRotVel;
+
+    /// <summary>
+    /// Cinematic camera motion accumulator
+    /// </summary>
+    public static Vector3 CameraVel;
+
     /// <summary> The camera's speed multiplier; to be applied after frame calculations </summary>
-    public static float CameraSpeedMult = 10f; // TODO: Make this configurable
+    public static float CameraPosSpeedMult = 1f;
+    public static float CameraRotSpeedMult = 1f;
     /// <summary> The location of the camera's origin for Orbit mode </summary>
     public static Vector3 OrbitCamFocus = Vector3.zero;
     /// <summary> The camera's distance from its rotation origin for Orbit mode </summary>
     public static float OrbitCamDist = 5f;
-    /// <summary> The camera's move speed for Fly mode, taking framerate into account </summary>
-    static float flyCamSpeed => Time.deltaTime * CameraSpeedMult;
-
+    /// <summary> Smooth Camera motion and rotation </summary>
     public static bool CinematicMode = false;
     public static bool IsOrthographic = false;
+
+    public static bool DoDepthOfField = false;
+    public static float DOFStrength = 1f;
+    public static float DOFDistance = 5f;
+    public static Volume DOFComponent;
 
     /// <summary> Whether the camera in Fly mode is panning </summary>
     static bool isDraggingCam = false;
@@ -79,6 +108,8 @@ public static class CameraController
         {
             LegacyCamListener = LegacyCamRef?.gameObject?.AddComponent<AudioListener>();
         }
+
+        LegacyCamRef.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
     }
 
     /// <summary> Remove the single disembodied camera </summary>
@@ -108,14 +139,13 @@ public static class CameraController
             Cursor.lockState = CursorLockMode.None;
             isDraggingCam = false;
         }
-
         else if (CurrentCameraMode == CameraMode.Orbit) HandleOrbitCam();
         else if (CurrentCameraMode == CameraMode.Fly) HandleFlyCam();
 
         CameraTransform.localRotation = Quaternion.Euler(CameraTransform.localEulerAngles.x, CameraTransform.localEulerAngles.y, 0f);
     }
 
-    static void HandleOrbitCam()
+    public static void HandleOrbitCam()
     {
         // TODO: I'm sure you can see what's wrong here
         List<KeyCode> PanKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.RightShift };
@@ -149,7 +179,7 @@ public static class CameraController
         CameraTransform.rotation = desiredRot;
     }
 
-    static void HandleFlyCam()
+    public static void HandleFlyCam()
     {
         // TODO: I'm sure you can see what's wrong here
         List<KeyCode> ForwardKeys = new List<KeyCode> { KeyCode.W, KeyCode.UpArrow };
@@ -160,7 +190,7 @@ public static class CameraController
         List<KeyCode> DownKeys = new List<KeyCode> { KeyCode.Q, KeyCode.RightShift };
         List<KeyCode> SprintKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.Return };
 
-        float sprintMult = IsPressing(SprintKeys) ? 2.25f : 1f; // TODO: Make this configurable
+        float sprintMult = IsPressing(SprintKeys) ? 4f : 1f; // TODO: Make this configurable
 
         Vector3 moveDir = Vector3.zero;
 
@@ -177,6 +207,12 @@ public static class CameraController
         if (IsPressing(LeftKeys))
             moveDir += -CameraTransform.transform.right;
 
+        if (Input.mouseScrollDelta.y != 0 )
+        {
+            CameraPosSpeedMult = Mathf.Pow(10, Math.Clamp(Mathf.Log(CameraPosSpeedMult, 10) + Input.mouseScrollDelta.y * 0.05f, -1, 0.75f));
+            CameraRotSpeedMult = CameraPosSpeedMult * 1.2f;
+        }
+
         Vector3 lateralMoveDir = new Vector3(moveDir.x, 0f, moveDir.z).normalized;
 
         // Vertical movement is based in world space
@@ -188,28 +224,46 @@ public static class CameraController
         if (IsPressing(DownKeys))
             verticalMoveAmount += -1f;
 
-        Vector3 combinedPosDelta = lateralMoveDir * flyCamSpeed * sprintMult
-                                  + Vector3.up * verticalMoveAmount * flyCamSpeed * sprintMult;
+        Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
 
-        Quaternion combinedRotDelta = Quaternion.identity;
-        if (isDraggingCam)
-        {
-            float mouseX = Input.GetAxis("Mouse X") * 10f; // TODO: Make this configurable
-            float mouseY = Input.GetAxis("Mouse Y") * 10f; // TODO: Make this configurable
-
-            combinedRotDelta *= Quaternion.Euler(Vector3.left * mouseY);
-            combinedRotDelta *= Quaternion.Euler(Vector3.up * mouseX);
-        }
+        float mouseX = isDraggingCam ? Input.GetAxis("Mouse X") * ViewSensitivity * CameraRotSpeedMult : 0;
+        float mouseY = isDraggingCam ? Input.GetAxis("Mouse Y") * ViewSensitivity * CameraRotSpeedMult : 0;
 
         if (CinematicMode)
         {
+            // rotation
+            CameraRotVel.y += mouseX * 0.01f;
+            CameraRotVel.x -= mouseY * 0.01f;
 
+            CameraRot.y = (CameraRot.y + CameraRotVel.y * Time.deltaTime * 100f) % 360;
+            CameraRot.x = (float)Math.IEEERemainder(CameraRot.x + CameraRotVel.x * Time.deltaTime * 100f, 360f);
+
+            // auto decel
+            float accelForce = 2f;
+
+            CameraTransform.position += CameraVel * Time.deltaTime * CameraPosSpeedMult;
+
+            if (!IsPressing(SprintKeys))
+            {
+                float decelBias = 1f - Math.Max(0, Vector3.Dot(moveAmount.normalized, CameraVel.normalized));
+                CameraVel -= CameraVel.normalized * Math.Min(CameraVel.magnitude, Time.deltaTime * accelForce * decelBias * CameraPosSpeedMult);
+            }
+
+            CameraVel += moveAmount * (accelForce * sprintMult * CameraPosSpeedMult * Time.deltaTime);
+
+            CameraRotVel /= 1 + 2 * (0.4f * CameraRotVel.magnitude + 0.8f) * Time.deltaTime * CameraRotSpeedMult;
         }
         else
         {
-            CameraTransform.position += combinedPosDelta;
-            CameraTransform.rotation *= combinedRotDelta;
+            CameraRotVel = new Vector2(0, 0);
+
+            CameraRot.x = Math.Clamp(CameraRot.x - mouseY, -90f, 90f);
+            CameraRot.y = (CameraRot.y + mouseX) % 360;
+
+            CameraTransform.position += moveAmount * (sprintMult * CameraPosSpeedMult * 6f * Time.deltaTime);
         }
+
+        CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 45f);
     }
 
     /// <summary> Enable the disembodied camera </summary>

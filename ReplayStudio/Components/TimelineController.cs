@@ -16,12 +16,6 @@ using UnityEngine.UIElements;
  * It is very cool
  */
 
-/*
- * TODO:
- * Frames visualization
- * Gray areas outside of clip
- */
-
 [RegisterTypeInIl2Cpp]
 public class TimelineController : MonoBehaviour
 {
