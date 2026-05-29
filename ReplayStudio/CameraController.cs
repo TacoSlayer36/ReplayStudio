@@ -49,7 +49,7 @@ public static class CameraController
     /// <summary>
     /// Camera Panning
     /// </summary>
-    public static Vector2 CameraRot = new Vector2(0f, 90f);
+    public static Vector2 CameraRot = new Vector2(0f, 0f);
 
     /// <summary>
     /// Cinematic camera rotaion accumulator
@@ -63,6 +63,7 @@ public static class CameraController
 
     /// <summary> The camera's speed multiplier; to be applied after frame calculations </summary>
     public static float CameraPosSpeedMult = 1f;
+    /// <summary> The camera's rotation speed multiplier; to be applied after frame calculations </summary>
     public static float CameraRotSpeedMult = 1f;
     /// <summary> The location of the camera's origin for Orbit mode </summary>
     public static Vector3 OrbitCamFocus = Vector3.zero;
@@ -141,8 +142,6 @@ public static class CameraController
         }
         else if (CurrentCameraMode == CameraMode.Orbit) HandleOrbitCam();
         else if (CurrentCameraMode == CameraMode.Fly) HandleFlyCam();
-
-        CameraTransform.localRotation = Quaternion.Euler(CameraTransform.localEulerAngles.x, CameraTransform.localEulerAngles.y, 0f);
     }
 
     public static void HandleOrbitCam()
@@ -177,6 +176,10 @@ public static class CameraController
 
         CameraTransform.position = desiredPos;
         CameraTransform.rotation = desiredRot;
+        CameraTransform.localRotation = Quaternion.Euler(CameraTransform.localEulerAngles.x, CameraTransform.localEulerAngles.y, 0f);
+
+        CameraRotVel = new Vector2(0, 0);
+        CameraVel = new Vector3(0, 0, 0);
     }
 
     public static void HandleFlyCam()
@@ -207,7 +210,7 @@ public static class CameraController
         if (IsPressing(LeftKeys))
             moveDir += -CameraTransform.transform.right;
 
-        if (Input.mouseScrollDelta.y != 0 )
+        if (Input.mouseScrollDelta.y != 0)
         {
             CameraPosSpeedMult = Mathf.Pow(10, Math.Clamp(Mathf.Log(CameraPosSpeedMult, 10) + Input.mouseScrollDelta.y * 0.05f, -1, 0.75f));
             CameraRotSpeedMult = CameraPosSpeedMult * 1.2f;
@@ -256,6 +259,7 @@ public static class CameraController
         else
         {
             CameraRotVel = new Vector2(0, 0);
+            CameraVel = new Vector3(0, 0, 0);
 
             CameraRot.x = Math.Clamp(CameraRot.x - mouseY, -90f, 90f);
             CameraRot.y = (CameraRot.y + mouseX) % 360;
@@ -263,7 +267,7 @@ public static class CameraController
             CameraTransform.position += moveAmount * (sprintMult * CameraPosSpeedMult * 6f * Time.deltaTime);
         }
 
-        CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 45f);
+        CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 0f);
     }
 
     /// <summary> Enable the disembodied camera </summary>
