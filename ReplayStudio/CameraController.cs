@@ -197,18 +197,21 @@ public static class CameraController
 
         Vector3 moveDir = Vector3.zero;
 
+        Vector3 forward = Quaternion.Euler(0f, CameraRot.y, 0f) * new Vector3(0,0,1);
+        Vector3 right = Quaternion.Euler(0f, CameraRot.y, 0f) * new Vector3(1,0,0);
+
         // Lateral movement is based in local space
         if (IsPressing(ForwardKeys))
-            moveDir += CameraTransform.transform.forward;
+            moveDir += forward;
 
         if (IsPressing(BackwardKeys))
-            moveDir += -CameraTransform.transform.forward;
+            moveDir += -forward;
 
         if (IsPressing(RightKeys))
-            moveDir += CameraTransform.transform.right;
+            moveDir += right;
 
         if (IsPressing(LeftKeys))
-            moveDir += -CameraTransform.transform.right;
+            moveDir += -right;
 
         if (Input.mouseScrollDelta.y != 0)
         {
