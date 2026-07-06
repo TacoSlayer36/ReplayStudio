@@ -1,17 +1,10 @@
-﻿using Il2CppExitGames.Client.Photon;
-using Il2CppPlayFab.ClientModels;
-using Il2CppRUMBLE.Managers;
-using Il2CppRUMBLE.Players;
+﻿using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Utilities;
-using Il2CppSteamworks;
 using Il2CppTMPro;
 using MelonLoader;
-using ReplayMod;
 using ReplayMod.Core;
 using ReplayMod.Replay;
 using ReplayMod.Replay.Files;
-using ReplayMod.Replay.Serialization;
-using ReplayMod.Replay.UI;
 using ReplayStudio.Components;
 using System;
 using System.Collections;
@@ -20,8 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using UnityEngine.Playables;
-using UnityEngine.PlayerLoop;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -345,14 +336,13 @@ internal static class UIManager
             TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = "No Replay Selected";
             TransformRefs["ReplayIndex"].GetComponent<TextMeshProUGUI>().text = "";
             TransformRefs["TimelinePreview"]?.GetComponent<TimelinePreview>()?.ClearMarkers();
+            return;
         }
-        else
-        {
-            TransformRefs["ReplayMetadataText"].GetComponent<TextMeshProUGUI>().text = ReplayAPI.FormatReplayTemplate(ReplayFiles.GetMetadataFormat(entry.header.Scene), entry.header);
-            TransformRefs["ReplayTitle"].GetComponent<TextMeshProUGUI>().text = entry.header.Title;
-            TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = entry.Name;
-            TransformRefs["ReplayIndex"].GetComponent<TextMeshProUGUI>().text = $"{shownIndex} / {count}";
-        }
+
+        TransformRefs["ReplayMetadataText"].GetComponent<TextMeshProUGUI>().text = ReplayAPI.FormatReplayTemplate(ReplayFiles.GetMetadataFormat(entry.header.Scene), entry.header);
+        TransformRefs["ReplayTitle"].GetComponent<TextMeshProUGUI>().text = entry.header.Title;
+        TransformRefs["ReplayName"].GetComponent<TextMeshProUGUI>().text = entry.Name;
+        TransformRefs["ReplayIndex"].GetComponent<TextMeshProUGUI>().text = $"{shownIndex} / {count}";
 
         TimelinePreview timelinePreview = TransformRefs["TimelinePreview"].GetComponent<TimelinePreview>();
         if (timelinePreview == null)

@@ -13,14 +13,13 @@ using ReplayStudio.Components;
 
 /* TODO:
  * Crystals
- * ~Camera speed controls
  */
 
 namespace ReplayStudio;
 
 /// <summary>
 /// Contains anything that runs universally as well as overrides for game events
-/// </summary>B
+/// </summary>
 public class Core : MelonMod
 {
     /// <summary> Melon singleton for this mod </summary>
@@ -34,6 +33,7 @@ public class Core : MelonMod
 
     /// <summary>Whether the user is viewing replays on the desktop or in VR</summary>
     public static bool DesktopMode = false;
+    public static bool AssumedInVR = false;
     public static float FPS = 30f;
 
     /// <summary> The mod's parent Game Object in DontDestroyOnLoad </summary>
@@ -108,6 +108,7 @@ public class Core : MelonMod
         if (ActiveScene == 0) return; // Skip the Loader
         
         IsSceneReady = true;
+
         if (ActiveScene == 1 && !GlobalInit)
             RunGlobalInit();
 
@@ -135,7 +136,7 @@ public class Core : MelonMod
     {
         GameObject timeline = UIManager.TransformRefs["Timeline"].gameObject;
         timeline.GetComponent<TimelineController>()?.Reset();
-        if (!CameraController.IsCameraEnabled) CameraController.SetCameraMode(CameraMode.Orbit);
+        if (!CameraController.IsCameraEnabled && !AssumedInVR) CameraController.SetCameraMode(CameraMode.Orbit);
     }
 
     internal void OnReplayEnded(ReplayInfo _)

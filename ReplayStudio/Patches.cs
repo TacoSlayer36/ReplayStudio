@@ -17,7 +17,8 @@ namespace ReplayStudio
     {
         private static void Postfix()
         {
-            Core.Instance.SceneReady();
+            if (!Core.Instance.IsSceneReady)
+                Core.Instance.SceneReady();
         }
     }
 
@@ -44,6 +45,8 @@ namespace ReplayStudio
 
             if (UIManager.CurrentWindowMode is not UIManager.WindowMode.Hidden)
                 UIManager.SetWindowType(UIManager.WindowMode.Hidden);
+
+            Core.AssumedInVR = true;
         }
     }
 
@@ -56,6 +59,8 @@ namespace ReplayStudio
 
             if (UIManager.CurrentWindowMode is not UIManager.WindowMode.Hidden)
                 UIManager.SetWindowType(UIManager.WindowMode.Hidden);
+
+            Core.AssumedInVR = true;
         }
     }
 }
