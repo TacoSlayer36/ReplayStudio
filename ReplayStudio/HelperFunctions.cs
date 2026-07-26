@@ -9,13 +9,18 @@ namespace ReplayStudio
 {
     internal static class HelperFunctions
     {
-        /// <summary>
-        /// Checks if any key in a list of KeyCodes is being pressed
-        /// </summary>
-        /// <param name="keyList"> The list to check </param>
-        /// <returns> True if any key in the list is pressed </returns>
-        public static bool IsPressing(List<KeyCode> keyList)
+        public static List<KeyCode> ControlKeys = new List<KeyCode> { KeyCode.LeftControl, KeyCode.RightControl };
+        public static List<KeyCode> ShiftKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.RightShift };
+        public static List<KeyCode> AltKeys = new List<KeyCode> { KeyCode.LeftAlt, KeyCode.RightAlt };
+        public static bool IsPressingAny(List<KeyCode> keyList)
         {
+            //if (ignoreModified)
+            //{
+            //    if (IsPressingAny(ControlKeys, false)) return false;
+            //    if (IsPressingAny(ShiftKeys, false)) return false;
+            //    if (IsPressingAny(AltKeys, false)) return false;
+            //}
+
             foreach (KeyCode keyCode in keyList)
             {
                 if (Input.GetKey(keyCode))

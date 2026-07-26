@@ -16,7 +16,7 @@ namespace ReplayStudio.Components;
 public class Tooltip : MonoBehaviour
 {
     public static Tooltip Instance;
-    
+
     public static bool Visible = false;
 
     RectTransform textTransform;

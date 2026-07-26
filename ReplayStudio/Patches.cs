@@ -9,9 +9,6 @@ using Il2CppRUMBLE.Managers;
 
 namespace ReplayStudio
 {
-    /// <summary>
-    /// Use a part of the local player's initialization to determine if scenes are fully loaded
-    /// </summary>
     [HarmonyPatch(typeof(PlayerVisuals), nameof(PlayerVisuals.ApplyPlayerVisuals), new Type[] { typeof(Il2CppRUMBLE.MeshGeneration.PlayerCharacterBaker.GeneratedPlayerVisuals) })]
     public static class PlayerVisuals_ApplyPlayerVisuals_Patch
     {
@@ -22,16 +19,13 @@ namespace ReplayStudio
         }
     }
 
-    /// <summary>
-    /// Runs the function to move the Legacy Camera after it moves itself but before it renders
-    /// </summary>
     [HarmonyPatch(typeof(RecordingCamera), nameof(RecordingCamera.BeginFrameRendering))]
     public static class RecordingCamera_BeginFrameRendering_Patch
     {
         private static void Postfix()
         {
-            if (CameraController.IsCameraEnabled)
-                CameraController.SnapLegacyCam();
+            if (ViewController.IsViewCamEnabled)
+                ViewController.SnapLegacyCam();
         }
     }
 

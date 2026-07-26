@@ -5,8 +5,7 @@
 
 namespace ReplayStudio
 {
-    /// <summary> </summary>
-    public static class BuildInfo
+        public static class BuildInfo
     {
         public const string Name = "ReplayStudio";
         public const string Author = "TacoSlayer36";

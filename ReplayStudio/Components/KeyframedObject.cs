@@ -1,14 +1,16 @@
-﻿using System;
+﻿using MelonLoader;
+using Newtonsoft.Json;
+using ReplayMod.Replay;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using UnityEngine;
 
 namespace ReplayStudio.Components;
 
-internal class KeyframedObject
+[RegisterTypeInIl2Cpp]
+[JsonObject(MemberSerialization.OptIn)]
+public class KeyframedObject : MonoBehaviour
 {
-    //public float Time;
-
-    //public float 
+    
 }

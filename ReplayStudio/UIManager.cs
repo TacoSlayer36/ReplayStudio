@@ -63,7 +63,7 @@ internal static class UIManager
         TransformRefs["Editor"].gameObject.SetActive(false);
         TimelineController.Instance.ScrollTo(0f, 0.5f, 10f, false);
 
-        CameraController.DOFComponent = Core.DDOL_GameObjects.transform.GetChild(1).GetComponent<Volume>();
+        ViewController.DOFComponent = Core.DDOL_GameObjects.transform.GetChild(1).GetComponent<Volume>();
     }
     static void FetchRefsInChildren(Transform parent)
     {
@@ -92,6 +92,7 @@ internal static class UIManager
         TransformRefs["OrbitCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrbitCamToggled);
         TransformRefs["FlyCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnFlyCamToggled);
         TransformRefs["POVCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnPOVCamToggled);
+        TransformRefs["RenderCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)CameraController.ToggleCamera);
 
         TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnFOVInputEdited);
         TransformRefs["DOFToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnDOFToggled);
@@ -167,54 +168,57 @@ internal static class UIManager
 
     static void OnOffCamToggled(bool toggleState)
     {
-        CameraController.DisableCamera();
+        ViewController.DisableViewCam();
     }
     static void OnOrbitCamToggled(bool toggleState)
     {
-        CameraController.SetCameraMode(CameraController.CameraMode.Orbit);
+        ViewController.SetCameraMode(ViewController.ViewMode.Orbit);
     }
     static void OnFlyCamToggled(bool toggleState)
     {
-        CameraController.SetCameraMode(CameraController.CameraMode.Fly);
+        ViewController.SetCameraMode(ViewController.ViewMode.Fly);
     }
-
+    static void OnRenderCamToggled(bool toggleState)
+    {
+        ViewController.SetCameraMode(ViewController.ViewMode.Render);
+    }
     static void OnPOVCamToggled(bool toggleState)
     {
-        CameraController.SetCameraMode(CameraController.CameraMode.POV);
+        ViewController.SetCameraMode(ViewController.ViewMode.POV);
     }
 
     static void OnFOVInputEdited(string input)
     {
         if (float.TryParse(input, out float fov))
         {
-            if (!CameraController.IsOrthographic)
+            if (!ViewController.IsOrthographic)
             {
                 if (!ViewingOtherPOV)
-                    CameraController.CameraFOV = fov;
+                    ViewController.ViewFOV = fov;
                 else
                     RecordingCamera.instance.fovSlider.value = fov;
             }
             else
             {
-                CameraController.CameraSize = fov;
+                ViewController.ViewSize = fov;
             }
         }
     }
 
     static void OnDOFToggled(bool toggleState)
     {
-        CameraController.DoDepthOfField = !CameraController.DoDepthOfField;
-        CameraController.DOFComponent.gameObject.SetActive(toggleState);
+        ViewController.DoDepthOfField = !ViewController.DoDepthOfField;
+        ViewController.DOFComponent.gameObject.SetActive(toggleState);
     }
 
     static void OnCinematicToggled(bool toggleState)
     {
-        CameraController.CinematicMode = toggleState;
+        ViewController.CinematicMode = toggleState;
     }
 
     static void OnOrthographicToggled(bool toggleState)
     {
-        CameraController.IsOrthographic = toggleState;
+        ViewController.IsOrthographic = toggleState;
     }
 
     static void OnDOFStrengthInputEdited(string input)
@@ -222,11 +226,11 @@ internal static class UIManager
         input = Regex.Match(input, "[\\d.]+").Value;
         if (float.TryParse(input, out float f))
         {
-            CameraController.DOFStrength = f;
+            ViewController.DOFStrength = f;
             TransformRefs["DOFStrengthSlider"].GetComponent<Slider>().value = f;
-            TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + CameraController.DOFStrength.ToString("0.##"));
+            TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + ViewController.DOFStrength.ToString("0.##"));
 
-            if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+            if (ViewController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
             {
                 dof.aperture.value = f;
             }
@@ -238,12 +242,12 @@ internal static class UIManager
         input = Regex.Match(input, "[\\d.]+").Value;
         if (float.TryParse(input, out float f))
         {
-            CameraController.DOFDistance = f;
+            ViewController.DOFDistance = f;
             TransformRefs["DOFDistanceSlider"].GetComponent<Slider>().value = f;
-            TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(CameraController.DOFDistance.ToString("0.#"));
+            TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(ViewController.DOFDistance.ToString("0.#"));
         }
 
-        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        if (ViewController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
         {
             dof.focusDistance.value = f;
         }
@@ -251,11 +255,11 @@ internal static class UIManager
 
     static void OnDOFStrengthSliderEdited(float value)
     {
-        CameraController.DOFStrength = value;
+        ViewController.DOFStrength = value;
         TransformRefs["DOFStrengthSlider"].GetComponent<Slider>().value = value;
-        TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + CameraController.DOFStrength.ToString("0.#"));
+        TransformRefs["DOFStrengthInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify("f/" + ViewController.DOFStrength.ToString("0.#"));
 
-        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        if (ViewController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
         {
             dof.aperture.value = value;
         }
@@ -263,11 +267,11 @@ internal static class UIManager
 
     static void OnDOFDistanceSliderEdited(float value)
     {
-        CameraController.DOFDistance = value;
+        ViewController.DOFDistance = value;
         TransformRefs["DOFDistanceSlider"].GetComponent<Slider>().value = value;
-        TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(CameraController.DOFDistance.ToString("0.##") + "M");
+        TransformRefs["DOFDistanceInput"].GetComponent<TMP_InputField>().SetTextWithoutNotify(ViewController.DOFDistance.ToString("0.##") + "M");
 
-        if (CameraController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
+        if (ViewController.DOFComponent.profile.TryGet<DepthOfField>(out DepthOfField dof))
         {
             dof.focusDistance.value = value;
         }
@@ -294,7 +298,7 @@ internal static class UIManager
         input = input.Trim();
         if (string.IsNullOrEmpty(input))
         {
-            ReplayMod.Core.Main.ReplayError($"Invalid replay name ({input})", CameraController.LegacyCamRef.transform.position);
+            ReplayMod.Core.Main.ReplayError($"Invalid replay name ({input})", ViewController.LegacyCamRef.transform.position);
             return;
         }
 
@@ -303,7 +307,7 @@ internal static class UIManager
 
         if (File.Exists(newPath))
         {
-            ReplayMod.Core.Main.ReplayError($"Name already exists ({newPath})", CameraController.LegacyCamRef.transform.position);
+            ReplayMod.Core.Main.ReplayError($"Name already exists ({newPath})", ViewController.LegacyCamRef.transform.position);
             return;
         }
 
@@ -313,7 +317,7 @@ internal static class UIManager
 
         ReplayFiles.ReloadReplays();
 
-        AudioManager.instance.Play(ReplayCache.SFX["Call_PoseGhost_MovePerformed"], CameraController.LegacyCamRef.transform.position);
+        AudioManager.instance.Play(ReplayCache.SFX["Call_PoseGhost_MovePerformed"], ViewController.LegacyCamRef.transform.position);
     }
 
     static void OnRenameInputSubmitted(string input)
@@ -431,7 +435,7 @@ internal static class UIManager
             return;
         }
 
-            float duration = (float)timeSpan.TotalSeconds;
+        float duration = (float)timeSpan.TotalSeconds;
         ReplayAPI.Seek(duration);
     }
 
@@ -451,7 +455,7 @@ internal static class UIManager
     static void OnExitMapButtonClicked()
     {
         MelonCoroutines.Start(Utilities.LoadMap(1));
-        CameraController.DisableCamera();
+        ViewController.DisableViewCam();
     }
 
     static void OnMinimizeButtonClicked()
@@ -471,12 +475,12 @@ internal static class UIManager
 
     static void OnPrevPOVButtonClicked()
     {
-        CameraController.SelectPOVPlayer(true);
+        ViewController.SelectPOVPlayer(true);
     }
 
     static void OnNextPOVButtonClicked()
     {
-        CameraController.SelectPOVPlayer(false);
+        ViewController.SelectPOVPlayer(false);
     }
 
     public static void UpdateSpeedInput()
@@ -506,7 +510,7 @@ internal static class UIManager
             TMP_InputField field = TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>();
             if (field == null || field.isFocused) return;
 
-            if (!CameraController.IsOrthographic)
+            if (!ViewController.IsOrthographic)
             {
                 if (ViewingOtherPOV)
                 {
@@ -515,15 +519,15 @@ internal static class UIManager
                 }
                 else
                 {
-                    field.SetTextWithoutNotify(CameraController.CameraFOV.ToString("0.##"));
+                    field.SetTextWithoutNotify(ViewController.ViewFOV.ToString("0.##"));
                 }
             }
             else
             {
-                field.SetTextWithoutNotify(CameraController.CameraSize.ToString("0.##"));
+                field.SetTextWithoutNotify(ViewController.ViewSize.ToString("0.##"));
             }
 
-            if (CameraController.IsOrthographic)
+            if (ViewController.IsOrthographic)
                 TransformRefs["FOVText"].GetComponent<TextMeshProUGUI>().text = "Size";
             else
                 TransformRefs["FOVText"].GetComponent<TextMeshProUGUI>().text = "FOV";
@@ -534,10 +538,10 @@ internal static class UIManager
     {
         RectTransform povPanel = TransformRefs["POVSelector"].GetComponent<RectTransform>();
 
-        if (CameraController.CurrentCameraMode is CameraController.CameraMode.POV && CameraController.IsCameraEnabled)
+        if (ViewController.CurrentViewMode is ViewController.ViewMode.POV && ViewController.IsViewCamEnabled)
         {
             Vector2 pos = povPanel.anchoredPosition;
-            pos.y = Mathf.Lerp(pos.y, -157f, 0.5f);
+            pos.y = Mathf.Lerp(pos.y, -70f, 0.2f);
             povPanel.anchoredPosition = pos;
 
             TransformRefs["POVPlayerText"].GetComponent<TextMeshProUGUI>().text = ReplayPlayback.povPlayer.Data.GeneralData.PublicUsername;
@@ -545,7 +549,7 @@ internal static class UIManager
         else
         {
             Vector2 pos = povPanel.anchoredPosition;
-            pos.y = Mathf.Lerp(pos.y, -95f, 0.5f);
+            pos.y = Mathf.Lerp(pos.y, 0f, 0.4f);
             povPanel.anchoredPosition = pos;
         }
     }
@@ -554,7 +558,7 @@ internal static class UIManager
     {
         RectTransform povPanel = TransformRefs["DOFSettings"].GetComponent<RectTransform>();
 
-        if (CameraController.DoDepthOfField)
+        if (ViewController.DoDepthOfField)
         {
             Vector2 pos = povPanel.anchoredPosition;
             pos.x = Mathf.Lerp(pos.x, 10f, 0.5f);
@@ -616,7 +620,7 @@ internal static class UIManager
             else if (CurrentWindowMode is WindowMode.Maximized or WindowMode.Minimized)
             {
                 Vector2 pos = rct.anchoredPosition;
-                    pos.x = Mathf.Lerp(pos.x, -100f, 0.3f);
+                pos.x = Mathf.Lerp(pos.x, -100f, 0.3f);
                 rct.anchoredPosition = pos;
             }
         }

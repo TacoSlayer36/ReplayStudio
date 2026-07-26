@@ -1,457 +1,54 @@
-﻿using System.Collections.Generic;
-using static ReplayStudio.HelperFunctions;
+﻿using ReplayStudio.Components;
 using UnityEngine;
-using Il2CppRUMBLE.Utilities;
-using UnityEngine.InputSystem;
-using UnityEngine.UI;
-using Il2CppRUMBLE.Managers;
-using ReplayMod.Core;
-using Il2CppRUMBLE.Players;
-using System;
-using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-namespace ReplayStudio;
-
-/// <summary>
-/// Control a disembodied camera from your desktop. The actual rendering is done by the Legacy Camera
-/// </summary>
-public static class CameraController
+namespace ReplayStudio
 {
-    /// <summary> Whether to snap the legacy camera to the disembodied location or not </summary>
-    public static bool IsCameraEnabled = false;
-    /// <summary> FOV to force the Legacy Camera into while it's being snapped to CameraTransform </summary>
-    public static float CameraFOV = 75f;
-    public static float CameraSize = 10f;
-    /// <summary> The active way the camera is controlled </summary>
-    public static CameraMode CurrentCameraMode = CameraMode.Orbit;
-    /// <summary> Two camera control types </summary>
-    public enum CameraMode
+    public static class CameraController
     {
-        /// <summary> The camera will be moved with an orbiting style, similar to Blender </summary>
-        Orbit,
-        /// <summary> The camera will be moved with a flight style, similar to Minecraft creative mode </summary>
-        Fly,
-        POV
-    }
-
-    static Player selectedPOVPlayer;
-
-    /// <summary>
-    /// Sensitivity
-    /// </summary>
-    public static float ViewSensitivity = 2f;
-
-    /// <summary> The Transform on the Game Object representing the transform of the disembodied camera </summary>
-    public static Transform CameraTransform;
+        public static Camera Camera;   
+        public static AudioListener AudioListener;
+        public static KeyframedObject KeyframeComponent;
 
 
-    /// <summary>
-    /// Camera Panning
-    /// </summary>
-    public static Vector2 CameraRot = new Vector2(0f, 0f);
+        public static bool Enabled = false;
 
-    /// <summary>
-    /// Cinematic camera rotaion accumulator
-    /// </summary>
-    public static Vector2 CameraRotVel;
-
-    /// <summary>
-    /// Cinematic camera motion accumulator
-    /// </summary>
-    public static Vector3 CameraVel;
-
-    /// <summary> The camera's speed multiplier; to be applied after frame calculations </summary>
-    public static float CameraPosSpeedMult = 1f;
-    /// <summary> The camera's rotation speed multiplier; to be applied after frame calculations </summary>
-    public static float CameraRotSpeedMult = 1f;
-    /// <summary> The location of the camera's origin for Orbit mode </summary>
-    public static Vector3 OrbitCamFocus = Vector3.zero;
-    /// <summary> The camera's distance from its rotation origin for Orbit mode </summary>
-    public static float OrbitCamDist = 5f;
-    /// <summary> Smooth Camera motion and rotation </summary>
-    public static bool CinematicMode = false;
-    public static bool IsOrthographic = false;
-
-    public static bool DoDepthOfField = false;
-    public static float DOFStrength = 1f;
-    public static float DOFDistance = 5f;
-    public static Volume DOFComponent;
-
-    /// <summary> Whether the camera in Fly mode is panning </summary>
-    static bool isDraggingCam = false;
-
-    public static Camera LegacyCamRef => RecordingCamera.Instance?.LegacyCamera;
-    public static AudioListener LegacyCamListener;
-
-    static Vector3 PlayerPos;
-    static Quaternion PlayerRot;
-
-    /// <summary> Create the single disembodied camera to view the replay through </summary>
-    /// <param name="mode">Sets the camera to this mode and enables it</param>
-    public static void InitializeCamera(CameraMode? mode = null)
-    {
-        if (CameraTransform != null) RemoveCamera(); // This is a singleton
-
-        GameObject cameraGo = new GameObject("DesktopCam");
-        CameraTransform = cameraGo.transform;
-        CameraTransform.SetParent(Core.DDOL_GameObjects.transform, true);
-        CameraTransform.position = Vector3.zero; // TODO
-        CameraTransform.rotation = Quaternion.identity; // TODO
-
-        if (mode != null)
-            EnableCamera(mode);
-        else
-            DisableCamera();
-
-        LegacyCamListener = LegacyCamRef?.gameObject?.GetComponent<AudioListener>();
-        if (LegacyCamListener == null)
+        public static void InitializeCamera()
         {
-            LegacyCamListener = LegacyCamRef?.gameObject?.AddComponent<AudioListener>();
+            if (Camera != null) RemoveCamera(); // This is a singleton
+
+            GameObject cameraGo = new GameObject("RenderCam");
+
+            Camera = cameraGo.AddComponent<Camera>();
+            AudioListener = cameraGo.AddComponent<AudioListener>();
+            KeyframeComponent = cameraGo.AddComponent<KeyframedObject>();
+            Core.StudioData.CameraKeyframeComponent = KeyframeComponent;
+            Camera.GetUniversalAdditionalCameraData().allowXRRendering = false;
+
+            Camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+            Camera.transform.SetParent(Core.DDOL_GameObjects.transform, true);
+            Camera.transform.position = Vector3.zero; // TODO
+            Camera.transform.rotation = Quaternion.identity; // TODO
+
+            Camera.enabled = Enabled;
+            AudioListener.enabled = Enabled;
         }
 
-        LegacyCamRef.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
-    }
-
-    /// <summary> Remove the single disembodied camera </summary>
-    public static void RemoveCamera()
-    {
-        if (CameraTransform == null) return;
-
-        GameObject.Destroy(CameraTransform.gameObject);
-        CameraTransform = null;
-    }
-
-    /// <summary> Run by Core.OnUpdate; branches to different control types or does nothing if the camera is off </summary>
-    public static void HandleCamera()
-    {
-        if (CameraTransform == null) return;
-        if (IsCameraEnabled == false) return;
-
-        if (Mouse.current.rightButton.wasPressedThisFrame)
+        public static void RemoveCamera()
         {
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
-            isDraggingCam = true;
-        }
-        if (Mouse.current.rightButton.wasReleasedThisFrame)
-        {
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-            isDraggingCam = false;
-        }
-        else if (CurrentCameraMode == CameraMode.Orbit) HandleOrbitCam();
-        else if (CurrentCameraMode == CameraMode.Fly) HandleFlyCam();
-    }
+            if (Camera == null) return;
 
-    public static void HandleOrbitCam()
-    {
-        // TODO: I'm sure you can see what's wrong here
-        List<KeyCode> PanKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.RightShift };
-
-        Vector3 desiredPos = OrbitCamFocus - CameraTransform.forward * OrbitCamDist;
-        Quaternion desiredRot = CameraTransform.rotation;
-
-        if (isDraggingCam)
-        {
-            float mouseX = Input.GetAxis("Mouse X");
-            float mouseY = Input.GetAxis("Mouse Y");
-
-            if (IsPressing(PanKeys))
-            {
-                OrbitCamFocus += -CameraTransform.right * mouseX * OrbitCamDist * 0.025f;
-                OrbitCamFocus += -CameraTransform.up * mouseY * OrbitCamDist * 0.025f;
-            }
-            else
-            {
-                CameraTransform.RotateAround(OrbitCamFocus, CameraTransform.up, mouseX * 7.5f);
-                CameraTransform.RotateAround(OrbitCamFocus, -CameraTransform.right, mouseY * 7.5f);
-                desiredRot = CameraTransform.rotation;
-            }
+            GameObject.Destroy(Camera.gameObject);
+            Camera = null;
         }
 
-        float scrollDelta = OrbitCamDist - (Input.mouseScrollDelta.y * OrbitCamDist * 0.2f);
-        OrbitCamDist = Mathf.Clamp(scrollDelta, 0.1f, 100f);
-        desiredPos = OrbitCamFocus - CameraTransform.forward * OrbitCamDist;
-
-        CameraTransform.position = desiredPos;
-        CameraTransform.rotation = desiredRot;
-        CameraTransform.localRotation = Quaternion.Euler(CameraTransform.localEulerAngles.x, CameraTransform.localEulerAngles.y, 0f);
-
-        CameraRotVel = new Vector2(0, 0);
-        CameraVel = new Vector3(0, 0, 0);
-    }
-
-    public static void HandleFlyCam()
-    {
-        // TODO: I'm sure you can see what's wrong here
-        List<KeyCode> ForwardKeys = new List<KeyCode> { KeyCode.W, KeyCode.UpArrow };
-        List<KeyCode> BackwardKeys = new List<KeyCode> { KeyCode.S, KeyCode.DownArrow };
-        List<KeyCode> RightKeys = new List<KeyCode> { KeyCode.D, KeyCode.RightArrow };
-        List<KeyCode> LeftKeys = new List<KeyCode> { KeyCode.A, KeyCode.LeftArrow };
-        List<KeyCode> UpKeys = new List<KeyCode> { KeyCode.E, KeyCode.RightControl };
-        List<KeyCode> DownKeys = new List<KeyCode> { KeyCode.Q, KeyCode.RightShift };
-        List<KeyCode> SprintKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.Return };
-
-        float sprintMult = IsPressing(SprintKeys) ? 4f : 1f; // TODO: Make this configurable
-
-        Vector3 moveDir = Vector3.zero;
-
-        Vector3 forward = Quaternion.Euler(0f, CameraRot.y, 0f) * new Vector3(0,0,1);
-        Vector3 right = Quaternion.Euler(0f, CameraRot.y, 0f) * new Vector3(1,0,0);
-
-        // Lateral movement is based in local space
-        if (IsPressing(ForwardKeys))
-            moveDir += forward;
-
-        if (IsPressing(BackwardKeys))
-            moveDir += -forward;
-
-        if (IsPressing(RightKeys))
-            moveDir += right;
-
-        if (IsPressing(LeftKeys))
-            moveDir += -right;
-
-        if (Input.mouseScrollDelta.y != 0)
+        public static void ToggleCamera(bool enabled)
         {
-            CameraPosSpeedMult = Mathf.Pow(10, Math.Clamp(Mathf.Log(CameraPosSpeedMult, 10) + Input.mouseScrollDelta.y * 0.05f, -1, 0.75f));
-            CameraRotSpeedMult = CameraPosSpeedMult * 1.2f;
-        }
+            if (Camera == null) return;
 
-        Vector3 lateralMoveDir = new Vector3(moveDir.x, 0f, moveDir.z).normalized;
-
-        // Vertical movement is based in world space
-        float verticalMoveAmount = 0f;
-
-        if (IsPressing(UpKeys))
-            verticalMoveAmount += 1f;
-
-        if (IsPressing(DownKeys))
-            verticalMoveAmount += -1f;
-
-        Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
-
-        float mouseX = isDraggingCam ? Input.GetAxis("Mouse X") * ViewSensitivity * CameraRotSpeedMult : 0;
-        float mouseY = isDraggingCam ? Input.GetAxis("Mouse Y") * ViewSensitivity * CameraRotSpeedMult : 0;
-
-        if (CinematicMode)
-        {
-            // rotation
-            CameraRotVel.y += mouseX * 0.01f;
-            CameraRotVel.x -= mouseY * 0.01f;
-
-            CameraRot.y = (CameraRot.y + CameraRotVel.y * Time.deltaTime * 100f) % 360;
-            CameraRot.x = (float)Math.IEEERemainder(CameraRot.x + CameraRotVel.x * Time.deltaTime * 100f, 360f);
-
-            // auto decel
-            float accelForce = 2f;
-
-            CameraTransform.position += CameraVel * Time.deltaTime * CameraPosSpeedMult;
-
-            if (!IsPressing(SprintKeys))
-            {
-                float decelBias = 1f - Math.Max(0, Vector3.Dot(moveAmount.normalized, CameraVel.normalized));
-                CameraVel -= CameraVel.normalized * Math.Min(CameraVel.magnitude, Time.deltaTime * accelForce * decelBias * CameraPosSpeedMult);
-            }
-
-            CameraVel += moveAmount * (accelForce * sprintMult * CameraPosSpeedMult * Time.deltaTime);
-
-            CameraRotVel /= 1 + 2 * (0.4f * CameraRotVel.magnitude + 0.8f) * Time.deltaTime * CameraRotSpeedMult;
-        }
-        else
-        {
-            CameraRotVel = new Vector2(0, 0);
-            CameraVel = new Vector3(0, 0, 0);
-
-            CameraRot.x = Math.Clamp(CameraRot.x - mouseY, -90f, 90f);
-            CameraRot.y = (CameraRot.y + mouseX) % 360;
-
-            CameraTransform.position += moveAmount * (sprintMult * CameraPosSpeedMult * 6f * Time.deltaTime);
-        }
-
-        CameraTransform.rotation = Quaternion.Euler(CameraRot.x, CameraRot.y, 0f);
-    }
-
-    /// <summary> Enable the disembodied camera </summary>
-    /// <param name="mode">Optional camera mode specification</param>
-    public static void EnableCamera(CameraMode? mode = null)
-    {
-        IsCameraEnabled = true;
-
-        ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
-
-        if (mode != null)
-            SetCameraMode((CameraMode)mode);
-    }
-
-    /// <summary> Disable the disembodied camera </summary>
-    public static void DisableCamera()
-    {
-        if (CameraTransform == null)
-            throw new System.Exception("Desktop Camera is not initialized");
-
-        IsCameraEnabled = false;
-        cameraDataStorage.ApplyData(LegacyCamRef, true);
-
-        updateCameraModeUI();
-
-        SetPlayer(true);
-
-        if (ReplayMod.Replay.ReplayAPI.IsPlaying)
-            ReplayMod.Core.Main.Playback?.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
-    }
-
-    /// <summary> Set the camera's active control system </summary>
-    /// <param name="mode">Camera mode to set</param>
-    public static void SetCameraMode(CameraMode mode)
-    {
-        cameraDataStorage.StoreData(LegacyCamRef, false);
-        LegacyCamRef.useOcclusionCulling = false;
-
-        CurrentCameraMode = mode;
-        IsCameraEnabled = true;
-        isDraggingCam = false;
-        updateCameraModeUI();
-
-        SetPlayer(false);
-
-        if (mode is not CameraMode.POV)
-        {
-            ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
-        }
-        else
-        {
-            if (selectedPOVPlayer == null || selectedPOVPlayer == PlayerManager.Instance.LocalPlayer) SelectPOVPlayer(false);
-            ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(selectedPOVPlayer);
-        }
-    }
-
-    public static void SelectPOVPlayer(bool previous)
-    {
-        List<Player> candidates = new();
-        foreach (var player in PlayerManager.Instance.AllPlayers)
-            if (player != PlayerManager.Instance.LocalPlayer) candidates.Add(player);
-
-        if (candidates.Count == 0)
-        {
-            selectedPOVPlayer = PlayerManager.Instance.LocalPlayer;
-            return;
-        }
-
-        int index = 0;
-        if (selectedPOVPlayer != null)
-        {
-            index = candidates.IndexOf(selectedPOVPlayer);
-            if (!previous)
-                index = (index + 1) % candidates.Count;
-            else
-                index = (index - 1) % candidates.Count;
-        }
-
-        selectedPOVPlayer = candidates[index];
-
-        ReplayMod.Core.Main.Playback.UpdateReplayCameraPOV(selectedPOVPlayer);
-    }
-
-    public static void SetPlayer(bool enabled)
-    {
-        if (PlayerManager.Instance?.LocalPlayer?.Controller?.gameObject == null || LegacyCamListener == null) return;
-
-        PlayerManager.Instance.LocalPlayer.Controller.gameObject.SetActive(enabled);
-        LegacyCamListener.enabled = !enabled;
-    }
-
-    private static void updateCameraModeUI()
-    {
-        if (!Core.Instance.GlobalInit) return;
-
-        Toggle offToggle = UIManager.TransformRefs["OffCamToggle"].GetComponent<Toggle>();
-        Toggle orbitToggle = UIManager.TransformRefs["OrbitCamToggle"].GetComponent<Toggle>();
-        Toggle flyToggle = UIManager.TransformRefs["FlyCamToggle"].GetComponent<Toggle>();
-        Toggle povToggle = UIManager.TransformRefs["POVCamToggle"].GetComponent<Toggle>();
-
-        offToggle.SetIsOnWithoutNotify(false);
-        orbitToggle.SetIsOnWithoutNotify(false);
-        flyToggle.SetIsOnWithoutNotify(false);
-        povToggle.SetIsOnWithoutNotify(false);
-
-        if (IsCameraEnabled && CurrentCameraMode is CameraMode.Orbit) orbitToggle.SetIsOnWithoutNotify(true);
-        else if (IsCameraEnabled && CurrentCameraMode is CameraMode.Fly) flyToggle.SetIsOnWithoutNotify(true);
-        else if (IsCameraEnabled && CurrentCameraMode is CameraMode.POV) povToggle.SetIsOnWithoutNotify(true);
-        else offToggle.SetIsOnWithoutNotify(true);
-    }
-
-    /// <summary>
-    /// Copy the pos/rot from the CameraTransform to the Legacy Camera
-    /// To be run via a harmony patch before the Legacy Camera renders
-    /// </summary>
-    public static void SnapLegacyCam()
-    {
-        LegacyCamRef.orthographic = IsOrthographic;
-        LegacyCamRef.orthographicSize = CameraSize;
-
-        if (CameraController.CurrentCameraMode is CameraController.CameraMode.POV) return;
-
-        LegacyCamRef.transform.position = CameraTransform.position;
-        LegacyCamRef.transform.rotation = CameraTransform.rotation;
-
-        LegacyCamRef.fieldOfView = CameraFOV;
-    }
-
-    /// <summary>
-    /// Stores the data of the Legacy Camera before modifying it
-    /// </summary>
-    internal static class cameraDataStorage
-    {
-        private static float fieldOfView = 90f;
-        private static LayerMask cullingMask = ~0;
-        private static bool useOcclusionCulling = true;
-        private static bool isDataStored = false;
-        private static bool orthographic = false;
-
-        /// <summary>
-        /// Store the input camera's data
-        /// </summary>
-        /// <param name="camera">The camera to store the data from</param>
-        /// <param name="overrideData">Determines if existing stored data is overriden</param>
-        public static void StoreData(Camera camera, bool overrideData)
-        {
-            if (isDataStored && !overrideData) return;
-
-            fieldOfView = camera.fieldOfView;
-            cullingMask = camera.cullingMask;
-            useOcclusionCulling = camera.useOcclusionCulling;
-            orthographic = camera.orthographic;
-
-            isDataStored = true;
-        }
-
-        /// <summary>
-        /// Apply the stored data onto the input camera
-        /// </summary>
-        /// <param name="camera">The camera to apply the data to</param>
-        /// <param name="clearData">Determines if the stored data is cleared</param>
-        public static void ApplyData(Camera camera, bool clearData)
-        {
-            if (!isDataStored) return;
-            if (camera == null)
-                throw new System.Exception("Camera is null");
-
-            camera.fieldOfView = fieldOfView;
-            camera.cullingMask = cullingMask;
-            camera.useOcclusionCulling = useOcclusionCulling;
-            camera.orthographic = orthographic;
-
-            if (clearData) isDataStored = false;
-        }
-
-        /// <summary>
-        /// Sets the flag that determines if data is already stored to false
-        /// </summary>
-        public static void ClearData()
-        {
-            isDataStored = false;
+            Camera.enabled = enabled;
+            AudioListener.enabled = enabled;
+            Enabled = enabled;
         }
     }
 }

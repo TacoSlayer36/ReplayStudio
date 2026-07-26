@@ -17,19 +17,10 @@ namespace ReplayStudio;
  *           - handle: a point for defining the curve
  */
 
-// https://github.com/shamim-akhtar/bezier-curve
-/// <summary>
-/// Component for defining, manipulating, and rendering bezier curves
-/// </summary>
-//[RegisterTypeInIl2Cpp]
+// https://github.com/shamim-akhtar/bezier-curve//[RegisterTypeInIl2Cpp]
 public class BezierCurve
 {
-    /// <summary>
-    /// Finds a point in 3D space on the curve
-    /// </summary>
-    /// <param name="t">0-1 point along the curve</param>
-    /// <param name="controlPoints">Points that define the curve</param>
-    public static Vector3 Point3(float t, List<Vector3> controlPoints)
+                        public static Vector3 Point3(float t, List<Vector3> controlPoints)
     {
         int N = controlPoints.Count - 1;
         if (N > 16)
@@ -52,11 +43,7 @@ public class BezierCurve
         return p;
     }
 
-    /// <summary>
-    /// Finds a point in 3D space on the curve
-    /// </summary>
-    /// <param name="t">0-1 point along the curve</param>
-    public Vector3 Point3(float t)
+                    public Vector3 Point3(float t)
     {
         return Point3(t, getControls());
     }

@@ -4,45 +4,42 @@ using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using MelonLoader;
 using UnityEngine;
-using static ReplayStudio.CameraController;
+using static ReplayStudio.ViewController;
 using ReplayMod;
 using ReplayMod.Replay.Serialization;
 using System.Collections;
 using Microsoft.Diagnostics.Runtime;
 using ReplayStudio.Components;
+using ReplayMod.Replay;
+using System.IO;
+using Newtonsoft.Json;
+using static ReplayStudio.HelperFunctions;
 
 /* TODO:
  * Crystals
  */
 
 namespace ReplayStudio;
-
-/// <summary>
-/// Contains anything that runs universally as well as overrides for game events
-/// </summary>
-public class Core : MelonMod
+public class Core : MelonMod
 {
-    /// <summary> Melon singleton for this mod </summary>
     public static Core Instance;
-    /// <summary> Melon singleton for ReplayMod </summary>
     public static ReplayMod.Core.Main ReplayModMain;
+
+    public static StudioData StudioData;
 
     internal bool GlobalInit = false;
     internal int ActiveScene = 0;
     internal bool IsSceneReady = false;
 
-    /// <summary>Whether the user is viewing replays on the desktop or in VR</summary>
     public static bool DesktopMode = false;
     public static bool AssumedInVR = false;
     public static float FPS = 30f;
 
-    /// <summary> The mod's parent Game Object in DontDestroyOnLoad </summary>
     public static GameObject DDOL_GameObjects;
     public static GameObject LineTemplate;
 
     internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
 
-    /// <summary></summary>
     public override void OnLateInitializeMelon()
     {
         Instance = this;
@@ -51,19 +48,16 @@ public class Core : MelonMod
         ReplayMod.Replay.ReplayAPI.onReplayEnded += OnReplayEnded;
     }
 
-    /// <summary></summary>
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)
     {
         ActiveScene = buildIndex;
     }
 
-    /// <summary></summary>
     public override void OnSceneWasUnloaded(int buildIndex, string sceneName)
     {
         IsSceneReady = false;
     }
 
-    /// <summary></summary>
     public override void OnUpdate()
     {
         if (!GlobalInit || !IsSceneReady) return;
@@ -77,11 +71,26 @@ public class Core : MelonMod
         }
 
         if (!UIManager.IsHoveringAny)
-            CameraController.HandleCamera();
+            ViewController.HandleViewCam();
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (ReplayAPI.IsPlaying)
         {
-            ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
+            }
+
+            if (Input.GetKeyDown(KeyCode.I))
+            {
+                SaveStudioData();
+            }
+
+            if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys) && Input.GetKeyDown(KeyCode.C))
+            {
+                CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
+                CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
+                CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+            }
         }
     }
 
@@ -100,13 +109,10 @@ public class Core : MelonMod
         TimelineController.Instance.UpdateClipInfos();
     }
 
-    /// <summary>
-    /// Runs when player visuals are generated
-    /// </summary>
     internal void SceneReady()
     {
         if (ActiveScene == 0) return; // Skip the Loader
-        
+
         IsSceneReady = true;
 
         if (ActiveScene == 1 && !GlobalInit)
@@ -114,7 +120,7 @@ public class Core : MelonMod
 
         if (!DesktopMode) return;
 
-        if (CameraController.IsCameraEnabled)
+        if (ViewController.IsViewCamEnabled)
             SetPlayer(false);
     }
 
@@ -134,15 +140,47 @@ public class Core : MelonMod
 
     internal void OnReplayStarted(ReplayInfo _)
     {
+        LoadStudioData();
+
         GameObject timeline = UIManager.TransformRefs["Timeline"].gameObject;
         timeline.GetComponent<TimelineController>()?.Reset();
-        if (!CameraController.IsCameraEnabled && !AssumedInVR) CameraController.SetCameraMode(CameraMode.Orbit);
+        if (!ViewController.IsViewCamEnabled && !AssumedInVR) ViewController.SetCameraMode(ViewMode.Fly);
+
+        CameraController.InitializeCamera();
     }
 
     internal void OnReplayEnded(ReplayInfo _)
     {
         TimelineController.Instance.Reset();
         TimelineController.Instance.ScrollTo(0f, 0.5f, 10f, false);
-        CameraController.DisableCamera();
+        ViewController.DisableViewCam();
+
+        CameraController.RemoveCamera();
+    }
+
+    internal void LoadStudioData()
+    {
+        string directory = ReplayAPI.CurrentFolder;
+        string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
+        string studioDataPath = Path.Combine(directory, replayName + ".json");
+        if (File.Exists(studioDataPath))
+        {
+            StudioData = JsonConvert.DeserializeObject<StudioData>(File.ReadAllText(studioDataPath));
+        }
+        else
+        {
+            StudioData = new();
+        }
+    }
+
+    internal void SaveStudioData()
+    {
+        string directory = ReplayAPI.CurrentFolder;
+        string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
+        string studioDataPath = Path.Combine(directory, replayName + ".json");
+        
+        string serializedJson = JsonConvert.SerializeObject(StudioData, Formatting.Indented);
+
+        File.WriteAllText(studioDataPath, serializedJson);
     }
 }
