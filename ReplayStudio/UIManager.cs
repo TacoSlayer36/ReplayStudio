@@ -356,19 +356,24 @@ internal static class UIManager
 
     public static void OnPlayButtonClicked()
     {
-        ReplayMod.Core.Main.Playback.TogglePlayback(true);
-        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed);
+        ReplayAPI.TogglePlayback(true);
+        // ReplayAPI.SetSpeed(Math.Abs(ReplayMod.Core.Main.Playback.storedPlaybackSpeed));
+        // ReplayMod.Core.Main.Playback.TogglePlayback(true);
+        // ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed);
     }
 
     public static void OnPlayReverseButtonClicked()
     {
-        ReplayMod.Core.Main.Playback.TogglePlayback(true);
-        ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed) * -1f;
+        ReplayAPI.TogglePlayback(true);
+        // ReplayAPI.SetSpeed(-Math.Abs(ReplayMod.Core.Main.Playback.storedPlaybackSpeed));
+        // ReplayMod.Core.Main.Playback.TogglePlayback(true);
+        // ReplayMod.Core.Main.Playback.playbackSpeed = Mathf.Abs(ReplayMod.Core.Main.Playback.playbackSpeed) * -1f;
     }
 
     public static void OnPauseButtonClicked()
     {
-        ReplayMod.Core.Main.Playback.TogglePlayback(false);
+        ReplayAPI.TogglePlayback(false);
+        // ReplayMod.Core.Main.Playback.TogglePlayback(false);
     }
 
     public static void OnNextFrameButtonClicked()
@@ -378,29 +383,34 @@ internal static class UIManager
 
     static void OnFineFastClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed += 0.1f;
+        // ReplayAPI.SetSpeed(ReplayMod.Core.Main.Playback.storedPlaybackSpeed + 0.1f);
+        // ReplayMod.Core.Main.Playback.playbackSpeed += 0.1f;
     }
     static void OnCoarseFastClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed += 1f;
+        // ReplayAPI.SetSpeed(ReplayMod.Core.Main.Playback.storedPlaybackSpeed + 1f);
+        // ReplayMod.Core.Main.Playback.playbackSpeed += 1f;
     }
 
     static void OnSpeedInputEdited(string input)
     {
         if (float.TryParse(input, out float speed))
         {
-            ReplayMod.Core.Main.Playback.playbackSpeed = speed;
+            ReplayAPI.SetSpeed(speed);
+            // ReplayMod.Core.Main.Playback.playbackSpeed = speed;
         }
     }
 
     static void OnFineSlowClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed -= 0.1f;
+        // ReplayAPI.SetSpeed(ReplayMod.Core.Main.Playback.storedPlaybackSpeed - 0.1f);
+        // ReplayMod.Core.Main.Playback.playbackSpeed -= 0.1f;
     }
 
     static void OnCoarseSlowClicked()
     {
-        ReplayMod.Core.Main.Playback.playbackSpeed -= 1f;
+        // ReplayAPI.SetSpeed(ReplayMod.Core.Main.Playback.storedPlaybackSpeed - 1f);
+        // ReplayMod.Core.Main.Playback.playbackSpeed -= 1f;
     }
 
     static void OnDurationInputEdited(string input)

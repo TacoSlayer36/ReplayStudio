@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using static ReplayStudio.HelperFunctions;
 using UnityEngine;
 using Il2CppRUMBLE.Utilities;
@@ -12,7 +12,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 namespace ReplayStudio;
-public static class ViewController
+
+public static class ViewController
 {
 	public static bool IsViewCamEnabled = false;
 	public static float ViewFOV = 75f;
@@ -51,7 +52,7 @@ namespace ReplayStudio;
 	public static float DOFDistance = 5f;
 	public static Volume DOFComponent;
 
-	static bool isDraggingView = false;
+	static bool isViewUnlocked = false;
 
 	public static Camera LegacyCamRef => RecordingCamera.Instance?.LegacyCamera;
 	public static AudioListener LegacyCamListener;
@@ -100,13 +101,13 @@ namespace ReplayStudio;
 		{
 			Cursor.visible = false;
 			Cursor.lockState = CursorLockMode.Locked;
-			isDraggingView = true;
+			isViewUnlocked = true;
 		}
 		if (Mouse.current.rightButton.wasReleasedThisFrame)
 		{
 			Cursor.visible = true;
 			Cursor.lockState = CursorLockMode.None;
-			isDraggingView = false;
+			isViewUnlocked = false;
 		}
 		else if (CurrentViewMode == ViewMode.Orbit) HandleOrbitCam();
 		else if (CurrentViewMode == ViewMode.Fly) HandleFlyCam();
@@ -120,7 +121,7 @@ namespace ReplayStudio;
 		Vector3 desiredPos = OrbitCamFocus - ViewCamTransform.forward * OrbitCamDist;
 		Quaternion desiredRot = ViewCamTransform.rotation;
 
-		if (isDraggingView)
+		if (isViewUnlocked)
 		{
 			float mouseX = Input.GetAxis("Mouse X");
 			float mouseY = Input.GetAxis("Mouse Y");
@@ -200,8 +201,8 @@ namespace ReplayStudio;
 
 		Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
 
-		float mouseX = isDraggingView ? Input.GetAxis("Mouse X") * ViewSensitivity * ViewRotSpeedMult : 0;
-		float mouseY = isDraggingView ? Input.GetAxis("Mouse Y") * ViewSensitivity * ViewRotSpeedMult : 0;
+		float mouseX = isViewUnlocked ? Input.GetAxis("Mouse X") * ViewSensitivity * ViewRotSpeedMult : 0;
+		float mouseY = isViewUnlocked ? Input.GetAxis("Mouse Y") * ViewSensitivity * ViewRotSpeedMult : 0;
 
 		if (CinematicMode)
 		{
@@ -274,7 +275,7 @@ namespace ReplayStudio;
 
 		CurrentViewMode = mode;
 		IsViewCamEnabled = true;
-		isDraggingView = false;
+		isViewUnlocked = false;
 		updateCameraModeUI();
 
 		SetPlayer(false);

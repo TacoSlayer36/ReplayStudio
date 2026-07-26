@@ -5,10 +5,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net6\**\*.dll" Private="false" />
-		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\net35\**\*.dll" Private="false" />
-		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\**\*.dll" Private="false" />
-		<Reference Include="C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\ReplayMod.dll" Private="false" />
+		<Reference Include="A:\SteamLibrary\steamapps\common\RUMBLE\MelonLoader\net6\**\*.dll" Private="false" />
+		<Reference Include="A:\SteamLibrary\steamapps\common\RUMBLE\MelonLoader\net35\**\*.dll" Private="false" />
+		<Reference Include="A:\SteamLibrary\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\**\*.dll" Private="false" />
+		<Reference Include="A:\SteamLibrary\steamapps\common\RUMBLE\Mods\ReplayMod.dll" Private="false" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -24,7 +24,7 @@
 		<Exec Command="taskkill /f /t /im RUMBLE.exe 2>NUL | echo killed rumble" />
 	</Target>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\RUMBLE\Mods\$(TargetFileName)&quot;" />
+		<Exec Command="copy &quot;$(TargetPath)&quot; &quot;A:\SteamLibrary\steamapps\common\RUMBLE\Mods\$(TargetFileName)&quot;" />
 	</Target>
 
 </Project>
