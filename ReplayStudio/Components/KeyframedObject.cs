@@ -11,7 +11,7 @@ namespace ReplayStudio.Components;
 #nullable enable
 internal class KeyframedObject : MonoBehaviour
 {
-    Dictionary<Type, SortedList<float, Keyframe>> framesStores = new();
+    Dictionary<Type, SortedList<float, Keyframe>> channels = new();
     public abstract class Keyframe
     {
         readonly float time;
@@ -38,19 +38,19 @@ internal class KeyframedObject : MonoBehaviour
 
         public static Keyframe? Previous(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.framesStores[type];
+            var frames = keys.channels[type];
             return frames.Values.LastOrDefault((k) => k?.Time() <= time);
         }
 
         public static Keyframe? Next(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.framesStores[type];
+            var frames = keys.channels[type];
             return frames.Values.FirstOrDefault((k) => k?.Time() > time);
         }
 
         public float tValue(Keyframe next, float time)
         {
-            return time - Time() / (next.Time() - Time());
+            return Time() == next.Time() ? 0 : time - Time() / (next.Time() - Time());
         }
     }
 
@@ -98,16 +98,17 @@ internal class KeyframedObject : MonoBehaviour
     {
         var time = ReplayAPI.CurrentTime;
 
-        foreach (var (type, _) in framesStores)
+        foreach (var (type, _) in channels)
         {
-            Keyframe.Next(type, this, time)?.Apply(gameObject, time);
+            var frame = Keyframe.Previous(type, this, time) ?? Keyframe.Next(type, this, time);
+            frame?.Apply(gameObject, time);
         }
     }
 
     public void Add<K>(K keyframe) where K : Keyframe
     {
-        framesStores[typeof(K)].Remove(keyframe.Time());
-        framesStores[typeof(K)].Add(keyframe.Time(), keyframe);
+        channels[typeof(K)].Remove(keyframe.Time());
+        channels[typeof(K)].Add(keyframe.Time(), keyframe);
     }
 
     public K? Next<K>(float time) where K : Keyframe
@@ -122,6 +123,6 @@ internal class KeyframedObject : MonoBehaviour
 
     public void Remove<K>(K keyframe) where K : Keyframe
     {
-        framesStores[typeof(K)].Remove(keyframe.Time());
+        channels[typeof(K)].Remove(keyframe.Time());
     }
 }
