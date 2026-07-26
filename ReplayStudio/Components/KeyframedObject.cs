@@ -10,10 +10,13 @@ using UnityEngine;
 namespace ReplayStudio.Components;
 
 #nullable enable
-internal class KeyframedObject : MonoBehaviour
+[RegisterTypeInIl2Cpp]
+[JsonObject(MemberSerialization.OptIn)]
+public class KeyframedObject : MonoBehaviour
 {
     public abstract class Keyframe
     {
+        [JsonProperty]
         protected float time;
 
         public abstract void Capture(GameObject obj, float time);
@@ -57,12 +60,14 @@ internal class KeyframedObject : MonoBehaviour
 
         public float tValue(Keyframe next, float time)
         {
-            return Time() == next.Time() ? 0 : Mathf.Clamp01(time - Time() / (next.Time() - Time()));
+            return System.Math.Clamp(Time() == next.Time() ? 0 : Mathf.Clamp01(time - Time() / (next.Time() - Time())), 0f, 1f);
         }
     }
 
+    [Serializable]
     public class PositionKeyFrame : Keyframe
     {
+        [JsonProperty]
         Vector3 data;
 
         public override void Capture(GameObject obj, float time)
@@ -77,6 +82,7 @@ internal class KeyframedObject : MonoBehaviour
 
         public override void Apply(GameObject obj, float time)
         {
+            MelonLogger.Msg($"pos: {data} | this.time: {this.time} | time: {time}");
             var tm = obj.transform;
             var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
 
@@ -84,8 +90,10 @@ internal class KeyframedObject : MonoBehaviour
         }
     }
 
+    [Serializable]
     public class RotationKeyFrame : Keyframe
     {
+        [JsonProperty]
         Quaternion data;
 
         public override void Capture(GameObject obj, float time)
@@ -107,8 +115,10 @@ internal class KeyframedObject : MonoBehaviour
         }
     }
 
+    [Serializable]
     public class FovKeyFrame : Keyframe
     {
+        [JsonProperty]
         float data;
 
         public override void Capture(GameObject obj, float time)
@@ -130,13 +140,24 @@ internal class KeyframedObject : MonoBehaviour
         }
     }
 
+    [JsonProperty]
     Dictionary<Type, SortedList<float, Keyframe>> channels = new();
     Dictionary<Type, Keyframe> constructors = new();
 
 
-    void Update()
+    void Start()
     {
-        var time = ReplayAPI.CurrentTime;
+        ReplayAPI.onReplaySeeked += Apply;
+    }
+
+    void Destroy()
+    {
+        ReplayAPI.onReplaySeeked -= Apply;
+    }
+
+    void Apply(float time)
+    {
+        if (!enabled) return;
 
         foreach (var (type, _) in channels)
         {

@@ -1,19 +1,14 @@
-﻿using Il2CppPlayFab.ClientModels;
-using Il2CppRUMBLE.Managers;
+﻿using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
-using Il2CppTMPro;
 using MelonLoader;
 using UnityEngine;
 using static ReplayStudio.ViewController;
-using ReplayMod;
 using ReplayMod.Replay.Serialization;
-using System.Collections;
-using Microsoft.Diagnostics.Runtime;
-using ReplayStudio.Components;
 using ReplayMod.Replay;
 using System.IO;
 using Newtonsoft.Json;
 using static ReplayStudio.HelperFunctions;
+using static ReplayStudio.Components.KeyframedObject;
 
 /* TODO:
  * Crystals
@@ -44,8 +39,8 @@ namespace ReplayStudio;
     {
         Instance = this;
         ReplayModMain = Melon<ReplayMod.Core.Main>.Instance;
-        ReplayMod.Replay.ReplayAPI.onReplayStarted += OnReplayStarted;
-        ReplayMod.Replay.ReplayAPI.onReplayEnded += OnReplayEnded;
+        ReplayAPI.onReplayStarted += OnReplayStarted;
+        ReplayAPI.onReplayEnded += OnReplayEnded;
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)
@@ -82,8 +77,17 @@ namespace ReplayStudio;
 
             if (Input.GetKeyDown(KeyCode.I))
             {
+                StudioData.CameraKeyframeComponent.Capture<PositionKeyFrame, RotationKeyFrame, FovKeyFrame>();
                 SaveStudioData();
             }
+
+            if (Input.GetKeyDown(KeyCode.Keypad0))
+            {
+                if (CameraController.Enabled) CameraController.ExitCamera();
+                else CameraController.EnterCamera();
+            }
+
+            //if (CameraController.Mapped) CameraController.MapCamera();
 
             if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys) && Input.GetKeyDown(KeyCode.C))
             {

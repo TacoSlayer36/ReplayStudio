@@ -333,17 +333,14 @@ namespace ReplayStudio;
 		Toggle orbitToggle = UIManager.TransformRefs["OrbitCamToggle"].GetComponent<Toggle>();
 		Toggle flyToggle = UIManager.TransformRefs["FlyCamToggle"].GetComponent<Toggle>();
 		Toggle povToggle = UIManager.TransformRefs["POVCamToggle"].GetComponent<Toggle>();
-		Toggle renderToggle = UIManager.TransformRefs["RenderCamToggle"].GetComponent<Toggle>();
 
 		offToggle.SetIsOnWithoutNotify(false);
 		orbitToggle.SetIsOnWithoutNotify(false);
 		flyToggle.SetIsOnWithoutNotify(false);
-		renderToggle.SetIsOnWithoutNotify(false);
 		povToggle.SetIsOnWithoutNotify(false);
 
 		if (IsViewCamEnabled && CurrentViewMode is ViewMode.Orbit) orbitToggle.SetIsOnWithoutNotify(true);
 		else if (IsViewCamEnabled && CurrentViewMode is ViewMode.Fly) flyToggle.SetIsOnWithoutNotify(true);
-		else if (IsViewCamEnabled && CurrentViewMode is ViewMode.Render) renderToggle.SetIsOnWithoutNotify(true);
 		else if (IsViewCamEnabled && CurrentViewMode is ViewMode.POV) povToggle.SetIsOnWithoutNotify(true);
 		else offToggle.SetIsOnWithoutNotify(true);
 	}

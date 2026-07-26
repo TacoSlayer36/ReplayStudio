@@ -92,7 +92,6 @@ internal static class UIManager
         TransformRefs["OrbitCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnOrbitCamToggled);
         TransformRefs["FlyCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnFlyCamToggled);
         TransformRefs["POVCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnPOVCamToggled);
-        TransformRefs["RenderCamToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)CameraController.ToggleCamera);
 
         TransformRefs["FOVInput"]?.GetComponent<TMP_InputField>().onEndEdit?.AddListener((System.Action<string>)OnFOVInputEdited);
         TransformRefs["DOFToggle"]?.GetComponent<Toggle>()?.onValueChanged?.AddListener((System.Action<bool>)OnDOFToggled);
@@ -177,10 +176,6 @@ internal static class UIManager
     static void OnFlyCamToggled(bool toggleState)
     {
         ViewController.SetCameraMode(ViewController.ViewMode.Fly);
-    }
-    static void OnRenderCamToggled(bool toggleState)
-    {
-        ViewController.SetCameraMode(ViewController.ViewMode.Render);
     }
     static void OnPOVCamToggled(bool toggleState)
     {

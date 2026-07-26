@@ -12,6 +12,7 @@ namespace ReplayStudio
 
 
         public static bool Enabled = false;
+        public static bool Mapped = false;
 
         public static void InitializeCamera()
         {
@@ -42,13 +43,32 @@ namespace ReplayStudio
             Camera = null;
         }
 
-        public static void ToggleCamera(bool enabled)
+        public static void EnterCamera()
+        {
+            Enabled = false;
+            if (Camera == null) return;
+
+            Camera.enabled = true;
+            AudioListener.enabled = true;
+            Enabled = true;
+        }
+
+        public static void ExitCamera()
+        {
+            Enabled = false;
+            if (Camera == null) return;
+
+            Camera.enabled = false;
+            AudioListener.enabled = false;
+        }
+
+        public static void MapCamera()
         {
             if (Camera == null) return;
 
-            Camera.enabled = enabled;
-            AudioListener.enabled = enabled;
-            Enabled = enabled;
+            CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
+            CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
+            CameraController.Camera.fieldOfView = ViewController.ViewFOV;
         }
     }
 }
