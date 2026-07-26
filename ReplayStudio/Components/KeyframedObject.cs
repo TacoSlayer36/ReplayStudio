@@ -1,4 +1,5 @@
-﻿using MelonLoader;
+﻿using Il2CppMS.Internal.Xml.XPath;
+using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;
 using System;
@@ -11,18 +12,20 @@ namespace ReplayStudio.Components;
 #nullable enable
 internal class KeyframedObject : MonoBehaviour
 {
-    Dictionary<Type, SortedList<float, Keyframe>> channels = new();
     public abstract class Keyframe
     {
-        readonly float time;
+        protected float time;
 
+        public abstract Keyframe Capture(GameObject obj, float time);
         public abstract void Apply(GameObject obj, float t);
+
+        public Keyframe(float time) { this.time = time; }
 
         public float Time()
         {
             return time;
         }
-
+        
         /// <summary>
         /// Safety: This must be of type T 
         /// </summary>
@@ -38,14 +41,14 @@ internal class KeyframedObject : MonoBehaviour
 
         public static Keyframe? Previous(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.channels[type];
-            return frames.Values.LastOrDefault((k) => k?.Time() <= time);
+            var frames = keys.channels.GetValueOrDefault(type);
+            return frames?.Values.LastOrDefault((k) => k?.Time() <= time);
         }
 
         public static Keyframe? Next(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.channels[type];
-            return frames.Values.FirstOrDefault((k) => k?.Time() > time);
+            var frames = keys.channels.GetValueOrDefault(type);
+            return frames?.Values.FirstOrDefault((k) => k?.Time() > time);
         }
 
         public float tValue(Keyframe next, float time)
@@ -56,11 +59,21 @@ internal class KeyframedObject : MonoBehaviour
 
     public class PositionKeyFrame : Keyframe
     {
-        readonly Vector3 data;
+        Vector3 data;
+
+        public PositionKeyFrame() : base(0) {}
+
+        public override Keyframe Capture(GameObject obj, float time)
+        {
+            var ret = new PositionKeyFrame();
+            ret.data = obj.transform.position;
+            ret.time = time;
+            return ret;
+        }
 
         public override void Apply(GameObject obj, float time)
         {
-            var tm = obj.GetComponent<Transform>();
+            var tm = obj.transform;
             var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
 
             tm.position = Vector3.Lerp(data, next.data, tValue(next, time));
@@ -69,11 +82,25 @@ internal class KeyframedObject : MonoBehaviour
 
     public class RotationKeyFrame : Keyframe
     {
-        readonly Quaternion data;
+        Quaternion data;
+
+        public RotationKeyFrame() : base(0) {}
+        public RotationKeyFrame(Quaternion data) : base(ReplayAPI.CurrentTime)
+        {
+            this.data = data;
+        }
+
+        public override Keyframe Capture(GameObject obj, float time)
+        {
+            var ret = new RotationKeyFrame();
+            ret.time = time;
+            ret.data = obj.transform.rotation;
+            return ret;
+        }
 
         public override void Apply(GameObject obj, float time)
         {
-            var tm = obj.GetComponent<Transform>();
+            var tm = obj.transform;
             var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
 
             tm.rotation = Quaternion.Slerp(data, next.data, tValue(next, time));
@@ -82,7 +109,17 @@ internal class KeyframedObject : MonoBehaviour
 
     public class FovKeyFrame : Keyframe
     {
-        readonly float data;
+        float data;
+
+        public FovKeyFrame() : base(0) {}
+
+        public override Keyframe Capture(GameObject obj, float time)
+        {
+            var ret = new FovKeyFrame();
+            ret.time = time;
+            ret.data = obj.GetComponent<Camera>().fieldOfView;
+            return ret;
+        }
 
         public override void Apply(GameObject obj, float time)
         {
@@ -92,6 +129,9 @@ internal class KeyframedObject : MonoBehaviour
             tm.fieldOfView = Mathf.Lerp(data, next.data, tValue(next, time));
         }
     }
+
+    Dictionary<Type, SortedList<float, Keyframe>> channels = new();
+    Dictionary<Type, Keyframe> constructors = new();
 
 
     void OnUpdate()
@@ -105,11 +145,66 @@ internal class KeyframedObject : MonoBehaviour
         }
     }
 
+    protected void Ensure<K>() where K : Keyframe
+    {
+        if (!channels.ContainsKey(typeof(K)))
+        {
+            channels[typeof(K)] = new();
+        }
+        
+    }
+    protected void Register<K>() where K : Keyframe, new()
+    {
+        Ensure<K>();
+        if (!constructors.ContainsKey(typeof(K)))
+        {
+            constructors[typeof(K)] = new K();
+        }
+    }
+
     public void Add<K>(K keyframe) where K : Keyframe
     {
+        Ensure<K>();
         channels[typeof(K)].Remove(keyframe.Time());
         channels[typeof(K)].Add(keyframe.Time(), keyframe);
     }
+
+    //
+    // use like
+    // ```
+    // keyframes.Capture<PositionKeyFrame>();
+    // keyframes.Capture<RotationKeyframe, FovKeyFrame>();
+    // ```
+    //
+    /// <summary>
+    /// Capure a keyframe and save it to a channel
+    /// </summary>
+    /// <typeparam name="K"></typeparam>
+    /// <param name="time"></param>
+    public void Capture<K>(float? time) where K : Keyframe, new()
+    {
+        Register<K>();
+        constructors[typeof(K)].Capture(gameObject, time ?? ReplayAPI.CurrentTime);
+    }
+    public void Capture<K1, K2>()
+        where K1 : Keyframe, new()
+        where K2 : Keyframe, new()
+    {
+        float time = ReplayAPI.CurrentTime;
+        Capture<K1>(time);
+        Capture<K2>(time);        
+    }
+    public void Capture<K1, K2, K3>()
+        where K1 : Keyframe, new()
+        where K2 : Keyframe, new()
+        where K3 : Keyframe, new()
+    {
+        float time = ReplayAPI.CurrentTime;
+        Capture<K1>(time);
+        Capture<K2>(time);        
+        Capture<K3>(time);        
+    }
+    
 
     public K? Next<K>(float time) where K : Keyframe
     {
@@ -123,6 +218,7 @@ internal class KeyframedObject : MonoBehaviour
 
     public void Remove<K>(K keyframe) where K : Keyframe
     {
+        Ensure<K>();
         channels[typeof(K)].Remove(keyframe.Time());
     }
 }
