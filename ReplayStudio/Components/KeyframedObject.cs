@@ -50,7 +50,7 @@ internal class KeyframedObject : MonoBehaviour
 
         public float tValue(Keyframe next, float time)
         {
-            return Time() == next.Time() ? 0 : time - Time() / (next.Time() - Time());
+            return Time() == next.Time() ? 0 : Mathf.Clamp01(time - Time() / (next.Time() - Time()));
         }
     }
 
