@@ -16,14 +16,18 @@ internal class KeyframedObject : MonoBehaviour
     {
         protected float time;
 
-        public abstract Keyframe Capture(GameObject obj, float time);
+        public abstract void Capture(GameObject obj, float time);
         public abstract void Apply(GameObject obj, float t);
-
-        public Keyframe(float time) { this.time = time; }
 
         public float Time()
         {
             return time;
+        }
+
+        public static void SaveCapture<K>(GameObject obj, K k) where K : Keyframe
+        {
+            var keys = obj.GetComponent<KeyframedObject>();
+            keys.Add(k);
         }
         
         /// <summary>
@@ -36,19 +40,19 @@ internal class KeyframedObject : MonoBehaviour
         /// <returns></returns>
         public static T? Next<T>(KeyframedObject keys, float time, T? def) where T : Keyframe
         {
-            return (T?)Next(typeof(T), keys, time);
+            return (T?)Next(typeof(T), keys, time) ?? def;
         }
 
         public static Keyframe? Previous(Type type, KeyframedObject keys, float time)
         {
             var frames = keys.channels.GetValueOrDefault(type);
-            return frames?.Values.LastOrDefault((k) => k?.Time() <= time);
+            return frames?.Values.LastOrDefault((k) => k != null && k.Time() <= time);
         }
 
         public static Keyframe? Next(Type type, KeyframedObject keys, float time)
         {
             var frames = keys.channels.GetValueOrDefault(type);
-            return frames?.Values.FirstOrDefault((k) => k?.Time() > time);
+            return frames?.Values.FirstOrDefault((k) => k != null && k.Time() > time);
         }
 
         public float tValue(Keyframe next, float time)
@@ -61,14 +65,14 @@ internal class KeyframedObject : MonoBehaviour
     {
         Vector3 data;
 
-        public PositionKeyFrame() : base(0) {}
-
-        public override Keyframe Capture(GameObject obj, float time)
+        public override void Capture(GameObject obj, float time)
         {
-            var ret = new PositionKeyFrame();
-            ret.data = obj.transform.position;
-            ret.time = time;
-            return ret;
+            var capture = new PositionKeyFrame
+            {
+                data = obj.transform.position,
+                time = time
+            };
+            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
@@ -84,18 +88,14 @@ internal class KeyframedObject : MonoBehaviour
     {
         Quaternion data;
 
-        public RotationKeyFrame() : base(0) {}
-        public RotationKeyFrame(Quaternion data) : base(ReplayAPI.CurrentTime)
+        public override void Capture(GameObject obj, float time)
         {
-            this.data = data;
-        }
-
-        public override Keyframe Capture(GameObject obj, float time)
-        {
-            var ret = new RotationKeyFrame();
-            ret.time = time;
-            ret.data = obj.transform.rotation;
-            return ret;
+            var capture = new RotationKeyFrame
+            {
+                time = time,
+                data = obj.transform.rotation
+            };
+            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
@@ -111,14 +111,14 @@ internal class KeyframedObject : MonoBehaviour
     {
         float data;
 
-        public FovKeyFrame() : base(0) {}
-
-        public override Keyframe Capture(GameObject obj, float time)
+        public override void Capture(GameObject obj, float time)
         {
-            var ret = new FovKeyFrame();
-            ret.time = time;
-            ret.data = obj.GetComponent<Camera>().fieldOfView;
-            return ret;
+            var capture = new FovKeyFrame
+            {
+                time = time,
+                data = obj.GetComponent<Camera>().fieldOfView
+            };
+            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
@@ -134,7 +134,7 @@ internal class KeyframedObject : MonoBehaviour
     Dictionary<Type, Keyframe> constructors = new();
 
 
-    void OnUpdate()
+    void Update()
     {
         var time = ReplayAPI.CurrentTime;
 
