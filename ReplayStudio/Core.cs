@@ -91,23 +91,22 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (CameraController.Enabled)
+                if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys))
                 {
-                    CameraController.ExitCamera();
-                    CameraController.DoMapping = false;
+                    CameraController.MapCamera();
+                    CameraController.EnterCamera(true);
                 }
                 else
                 {
-                    CameraController.EnterCamera(true);
-                    CameraController.DoMapping = true;
+                    if (CameraController.Enabled)
+                    {
+                        CameraController.ExitCamera();
+                    }
+                    else
+                    {
+                        CameraController.EnterCamera(true);
+                    }
                 }
-            }
-
-            if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys) && Input.GetKeyDown(KeyCode.C))
-            {
-                CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
-                CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
-                CameraController.Camera.fieldOfView = ViewController.ViewFOV;
             }
         }
     }

@@ -376,7 +376,22 @@ public static class ViewController
 		LegacyCamRef.fieldOfView = ViewFOV;
 	}
 
-	internal static class cameraDataStorage
+    public static void MoveCameraToMapStart(int map)
+    {
+        // TODO: Other maps
+        if (map == 4) // Pit
+        {
+            ViewCamTransform.transform.position = new Vector3(8.12f, 8.89f, -10.13f);
+            ViewCamTransform.transform.rotation = Quaternion.Euler(34f, 321f, 0f);
+        }
+        else
+        {
+            ViewCamTransform.transform.position = Vector3.zero;
+            ViewCamTransform.transform.rotation = Quaternion.identity;
+        }
+    }
+
+    internal static class cameraDataStorage
 	{
 		private static float fieldOfView = 90f;
 		private static LayerMask cullingMask = ~0;

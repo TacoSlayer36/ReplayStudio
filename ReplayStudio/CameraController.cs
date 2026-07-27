@@ -16,11 +16,11 @@ namespace ReplayStudio
 
 
         public static bool Enabled = false;
-        public static bool DoMapping = false;
+        public static bool DoMapping = true; // TODO: Should this ever be false?
 
         public static void HandleCamera()
         {
-            if ((ReplayAPI.IsPaused || !ReplayAPI.IsPlaying) && DoMapping)
+            if (DoMapping)
             {
                 CameraController.MapCamera();
             }
@@ -39,8 +39,8 @@ namespace ReplayStudio
 
             Camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
             Camera.transform.SetParent(Core.DDOL_GameObjects.transform, true);
-            Camera.transform.position = Vector3.zero; // TODO
-            Camera.transform.rotation = Quaternion.identity; // TODO
+
+            MoveCameraToMapStart(Core.Instance.ActiveScene);
 
             Camera.nearClipPlane = 0.001f;
 
@@ -48,8 +48,8 @@ namespace ReplayStudio
             AudioListener.enabled = Enabled;
 
 
-            if (CameraModel == null)
-                CameraModel = Core.DDOL_GameObjects.transform.GetChild(4).gameObject;
+            CameraModel = GameObject.Instantiate(Core.DDOL_GameObjects.transform.GetChild(4).gameObject);
+
             CameraModel.SetActive(true);
             CameraModel.transform.SetParent(Camera.transform);
             CameraModel.transform.localPosition = Vector3.zero;
@@ -58,11 +58,8 @@ namespace ReplayStudio
 
         public static void RemoveCamera()
         {
-            if (Camera == null) return;
-
-            Camera.transform.DetachChildren();
-            GameObject.Destroy(Camera.gameObject);
-            Camera = null;
+            if (CameraModel != null) GameObject.Destroy(CameraModel.gameObject);
+            if (Camera != null) GameObject.Destroy(Camera.gameObject);
         }
 
         public static void EnterCamera(bool snapView)
@@ -97,7 +94,22 @@ namespace ReplayStudio
 
             CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
             CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
-            //CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+            CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+        }
+
+        public static void MoveCameraToMapStart(int map)
+        {
+            // TODO: Other maps
+            if (map == 4) // Pit
+            {
+                Camera.transform.position = new Vector3(6.64f, 9.92f, 9.80f);
+                Camera.transform.rotation = Quaternion.Euler(44f, 210f, 0f);
+            }
+            else
+            {
+                Camera.transform.position = Vector3.zero;
+                Camera.transform.rotation = Quaternion.identity;
+            }
         }
     }
 }
