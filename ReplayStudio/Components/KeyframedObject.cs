@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using ReplayMod.Replay;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using UnityEngine;
 
@@ -12,12 +14,36 @@ namespace ReplayStudio.Components;
 [RegisterTypeInIl2Cpp]
 public class KeyframedObject : MonoBehaviour
 {
-    [Serializable]
     public abstract class Keyframe
     {
+        public class SnapTypeConverter : TypeConverter
+        {
+            public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+                => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+
+            public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
+            {
+                if (value is string s && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var f))
+                    return new Snap(f);
+                return base.ConvertFrom(context, culture, value);
+            }
+
+            public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
+                => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+            public override object? ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
+            {
+                if (destinationType == typeof(string) && value is Snap snap)
+                    return snap.Time().ToString(CultureInfo.InvariantCulture);
+                return base.ConvertTo(context, culture, value, destinationType);
+            }
+        }
+
+        [TypeConverter(typeof(SnapTypeConverter))]
         public record Snap : IComparable<Snap>, IEquatable<Snap>
         {
             private const int DIV = 360;
+            [JsonProperty]
             int time;
 
             public Snap(float time)
@@ -53,6 +79,7 @@ public class KeyframedObject : MonoBehaviour
         }
 
         [JsonProperty]
+        [TypeConverter(typeof(SnapTypeConverter))]
         public Snap snap;
 
         public Keyframe()
@@ -102,9 +129,9 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
-    [Serializable]
     public class PositionKeyFrame : Keyframe
     {
+        [JsonProperty]
         Vector3 data;
 
         public override Keyframe Capture(GameObject obj)
@@ -118,7 +145,6 @@ public class KeyframedObject : MonoBehaviour
 
         public override void Apply(GameObject obj, float time)
         {
-            MelonLogger.Msg($"pos: {data} | this.snap: {snap} | time: {time}");
             var tm = obj.transform;
             var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
 
@@ -126,9 +152,9 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
-    [Serializable]
     public class RotationKeyFrame : Keyframe
     {
+        [JsonProperty]
         Quaternion data;
 
         public override Keyframe Capture(GameObject obj)
@@ -149,9 +175,9 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
-    [Serializable]
     public class FovKeyFrame : Keyframe
     {
+        [JsonProperty]
         float data;
 
         public override Keyframe Capture(GameObject obj)
@@ -174,19 +200,16 @@ public class KeyframedObject : MonoBehaviour
 
     [JsonProperty]
     public Dictionary<Type, SortedList<Keyframe.Snap, Keyframe>> Channels = new();
-    
-    [JsonIgnore]
+
     Dictionary<Type, Keyframe> constructors = new();
 
     void Start()
     {
-        MelonLogger.Msg("RegKFO");
         ReplayAPI.onReplayTimeChanged += Apply;
     }
 
     void OnDestroy()
     {
-        MelonLogger.Msg("DeregKFO");
         ReplayAPI.onReplayTimeChanged -= Apply;
     }
 

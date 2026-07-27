@@ -34,6 +34,12 @@ public class Core : MelonMod
     public static GameObject DDOL_GameObjects;
     public static GameObject LineTemplate;
 
+    public static JsonSerializerSettings settings = new JsonSerializerSettings()
+    {
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+        TypeNameHandling = TypeNameHandling.Auto
+    };
+
     internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
 
     public override void OnLateInitializeMelon()
@@ -158,13 +164,13 @@ public class Core : MelonMod
 
     internal void OnReplayStarted(ReplayInfo _)
     {
-        LoadStudioData();
-
         GameObject timeline = UIManager.TransformRefs["Timeline"].gameObject;
         timeline.GetComponent<TimelineController>()?.Reset();
         if (!ViewController.IsViewCamEnabled && !AssumedInVR) ViewController.SetCameraMode(ViewController.ViewMode.Fly);
 
         CameraController.InitializeCamera();
+
+        LoadStudioData();
     }
 
     internal void OnReplayEnded(ReplayInfo _)
@@ -181,13 +187,22 @@ public class Core : MelonMod
         string directory = ReplayAPI.CurrentFolder;
         string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
         string studioDataPath = Path.Combine(directory, replayName + ".json");
+
         if (File.Exists(studioDataPath))
         {
-            StudioData = JsonConvert.DeserializeObject<StudioData>(File.ReadAllText(studioDataPath));
+            StudioData = JsonConvert.DeserializeObject<StudioData>(File.ReadAllText(studioDataPath), settings);
         }
         else
         {
             StudioData = new();
+        }
+
+        foreach (var (type, sortedList) in StudioData.CameraKeyframes)
+        {
+            foreach (var (snap, keyframe) in sortedList)
+            {
+                new TimelineController.KeyframeMarker(CameraController.Camera.gameObject, keyframe);
+            }
         }
     }
 
@@ -196,9 +211,8 @@ public class Core : MelonMod
         string directory = ReplayAPI.CurrentFolder;
         string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
         string studioDataPath = Path.Combine(directory, replayName + ".json");
-        
-        string serializedJson = JsonConvert.SerializeObject(CameraController.KeyframeComponent.Channels, Formatting.Indented);
-        MelonLogger.Msg(serializedJson);
+
+        string serializedJson = JsonConvert.SerializeObject(StudioData, Formatting.Indented, settings);
 
         File.WriteAllText(studioDataPath, serializedJson);
     }

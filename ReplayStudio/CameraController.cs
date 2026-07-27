@@ -1,7 +1,5 @@
-using ReplayMod.Replay;
 using ReplayStudio.Components;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 
 namespace ReplayStudio
@@ -16,7 +14,7 @@ namespace ReplayStudio
 
 
         public static bool Enabled = false;
-        public static bool DoMapping = true; // TODO: Should this ever be false?
+        public static bool DoMapping = false;
 
         public static void HandleCamera()
         {
@@ -65,6 +63,7 @@ namespace ReplayStudio
         public static void EnterCamera(bool snapView)
         {
             ViewController.StoreViewCamTransform();
+            DoMapping = true;
 
             Enabled = false;
             if (Camera == null) return;
@@ -80,6 +79,7 @@ namespace ReplayStudio
         public static void ExitCamera()
         {
             ViewController.ReapplyViewCamTransform();
+            DoMapping = false;
 
             Enabled = false;
             if (Camera == null) return;
