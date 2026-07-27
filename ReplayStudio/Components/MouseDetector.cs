@@ -1,6 +1,8 @@
-using MelonLoader;
+﻿using MelonLoader;
 using UnityEngine;
 using UnityEngine.EventSystems;
+
+namespace ReplayStudio.Components;
 
 [RegisterTypeInIl2Cpp]
 public class MouseDetector : MonoBehaviour

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using static ReplayStudio.Components.KeyframedObject;
 
@@ -7,7 +7,7 @@ namespace ReplayStudio
     [Serializable]
     public class StudioData
     {
-        Dictionary<Type, SortedList<float, Keyframe>> CameraKeyframes
+        Dictionary<Type, SortedList<Keyframe.Snap, Keyframe>> CameraKeyframes
         {
             get
             {

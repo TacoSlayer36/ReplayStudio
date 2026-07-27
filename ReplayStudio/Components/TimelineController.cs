@@ -1,13 +1,11 @@
-using Il2CppMichsky.UI.ModernUIPack;
-using Il2CppOculus.Platform;
-using Il2CppTMPro;
+﻿using Il2CppTMPro;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 
+namespace ReplayStudio.Components;
 /*
  * This system is almost entirely
  * implemented by Syborg
@@ -17,7 +15,7 @@ using UnityEngine.UIElements;
  */
 
 [RegisterTypeInIl2Cpp]
-public class TimelineController : MonoBehaviour
+public partial class TimelineController : MonoBehaviour
 {
 	public static TimelineController Instance;
 
@@ -88,8 +86,10 @@ public class TimelineController : MonoBehaviour
 	private List<GameObject> segments = new();
 	private List<TextMeshProUGUI> timeCodes = new();
 
+	public static Transform KeyframeParent;
 	public static Transform MarkerParent;
 	private List<ReplayMarker> markers = new();
+	private SortedList<KeyframedObject.Keyframe.Snap, List<KeyframeMarker>> keyframes = new();
 
 	private GameObject scrubber;
 	private float scrubberDuration;
@@ -108,6 +108,7 @@ public class TimelineController : MonoBehaviour
 		viewportMouseDetector = transform.parent.GetComponent<MouseDetector>();
 		segmentTemplate = transform.Find("TimelineSegment").gameObject;
 		scrubber = transform.parent.Find("Scrubber").gameObject;
+		KeyframeParent = transform.parent.Find("Keyframes");
 		MarkerParent = transform.parent.Find("Markers");
 		leftMargin = transform.parent.Find("LeftMargin").GetComponent<RectTransform>();
 		rightMargin = transform.parent.Find("RightMargin").GetComponent<RectTransform>();
@@ -327,6 +328,28 @@ public class TimelineController : MonoBehaviour
 			frameField.SetTextWithoutNotify(CurrentFrame.ToString());
 	}
 
+
+	protected void AddKeyframeMarker(KeyframeMarker marker)
+	{
+		if (!keyframes.ContainsKey(marker.keyframe.snap))
+		{
+			keyframes[marker.keyframe.snap] = new(); 	
+		}
+		keyframes[marker.keyframe.snap].Add(marker);
+	}
+	protected void RemoveKeyframeMarker(KeyframeMarker marker)
+	{
+		if (keyframes.ContainsKey(marker.keyframe.snap))
+		{
+			keyframes[marker.keyframe.snap].Remove(marker);
+		}
+	}
+
+	public IEnumerable<KeyframeMarker> GetKeyframeMarkers(float time)
+	{
+		return keyframes.GetValueOrDefault(new KeyframedObject.Keyframe.Snap(time)) ?? new();
+	}
+
 	public void InitializeMarkers()
 	{
 		clearMarkers();
@@ -357,7 +380,24 @@ public class TimelineController : MonoBehaviour
 		maxVisibleSegments = 20;
 		Subdivisions = 10;
 		Scroll = 0f;
+		ClearKeyframes();
 		Start();
+	}
+
+	void ClearKeyframes()
+	{
+		var (snap, frame) = keyframes.LastOrDefault();
+		while (frame != null)
+		{
+			var marker = frame.LastOrDefault();
+			while (marker != null)
+			{
+				marker.Remove();
+				marker = frame.LastOrDefault();
+			}
+			keyframes.Remove(snap);
+			(snap, frame) = keyframes.LastOrDefault();
+		}
 	}
 
 	private void scrollCorrection(float duration, float t)

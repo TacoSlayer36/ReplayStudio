@@ -1,4 +1,4 @@
-using Il2CppSystem.Security.Cryptography;
+﻿using Il2CppSystem.Security.Cryptography;
 using MelonLoader;
 using ReplayMod.Replay.Files;
 using ReplayMod.Replay.Serialization;
@@ -8,7 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static TimelineController;
 
 namespace ReplayStudio.Components;
 

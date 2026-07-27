@@ -1,16 +1,14 @@
-using Il2CppRUMBLE.Managers;
+﻿using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader;
 using UnityEngine;
-using static ReplayStudio.ViewController;
 using ReplayMod.Replay.Serialization;
 using ReplayMod.Replay;
 using System.IO;
 using Newtonsoft.Json;
-using static ReplayStudio.HelperFunctions;
-using static ReplayStudio.Components.KeyframedObject;
 using UnityEngine.EventSystems;
 using Il2CppTMPro;
+using ReplayStudio.Components;
 
 /* TODO:
  * Crystals
@@ -85,13 +83,16 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.I))
             {
-                CameraController.KeyframeComponent.Capture<PositionKeyFrame, RotationKeyFrame, FovKeyFrame>();
+                CameraController.KeyframeComponent.Capture<
+                    KeyframedObject.PositionKeyFrame, 
+                    KeyframedObject.RotationKeyFrame,
+                    KeyframedObject.FovKeyFrame>();
                 SaveStudioData();
             }
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys))
+                if (HelperFunctions.IsPressingAny(HelperFunctions.ControlKeys) && HelperFunctions.IsPressingAny(HelperFunctions.AltKeys) && Input.GetKeyDown(KeyCode.C))
                 {
                     CameraController.MapCamera();
                     CameraController.EnterCamera(true);
@@ -138,7 +139,7 @@ public class Core : MelonMod
         if (!DesktopMode) return;
 
         if (ViewController.IsViewCamEnabled)
-            SetPlayer(false);
+            ViewController.SetPlayer(false);
     }
 
     internal void RunGlobalInit()
@@ -152,7 +153,7 @@ public class Core : MelonMod
 
         LineTemplate = DDOL_GameObjects.transform.Find("LineTemplate").gameObject;
 
-        InitializeCamera();
+        ViewController.InitializeCamera();
     }
 
     internal void OnReplayStarted(ReplayInfo _)
@@ -161,7 +162,7 @@ public class Core : MelonMod
 
         GameObject timeline = UIManager.TransformRefs["Timeline"].gameObject;
         timeline.GetComponent<TimelineController>()?.Reset();
-        if (!ViewController.IsViewCamEnabled && !AssumedInVR) ViewController.SetCameraMode(ViewMode.Fly);
+        if (!ViewController.IsViewCamEnabled && !AssumedInVR) ViewController.SetCameraMode(ViewController.ViewMode.Fly);
 
         CameraController.InitializeCamera();
     }

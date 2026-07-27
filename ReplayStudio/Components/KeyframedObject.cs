@@ -1,5 +1,4 @@
-using Il2CppMS.Internal.Xml.XPath;
-using MelonLoader;
+﻿using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;
 using System;
@@ -16,21 +15,61 @@ public class KeyframedObject : MonoBehaviour
     [Serializable]
     public abstract class Keyframe
     {
-        protected float time;
-
-        public abstract void Capture(GameObject obj, float time);
-        public abstract void Apply(GameObject obj, float t);
-
-        public float Time()
+        public record Snap : IComparable<Snap>, IEquatable<Snap>
         {
-            return time;
+            private const int DIV = 360;
+            int time;
+
+            public Snap(float time)
+            {
+                this.time = (int)System.Math.Round(time * DIV);
+            }
+
+            public static bool operator <=(Snap lhs, Snap rhs)
+            {
+                return lhs.time <= rhs.time;
+            }
+            public static bool operator >=(Snap lhs, Snap rhs)
+            {
+                return lhs.time >= rhs.time;
+            }
+            public static bool operator <(Snap lhs, Snap rhs)
+            {
+                return lhs.time < rhs.time;
+            }
+            public static bool operator >(Snap lhs, Snap rhs)
+            {
+                return lhs.time > rhs.time;
+            }
+            public int CompareTo(Snap? other)
+            {
+                return time - other?.time ?? 0;
+            }
+
+            public float Time()
+            {
+                return (float)time / DIV;
+            }
         }
 
-        public static void SaveCapture<K>(GameObject obj, K k) where K : Keyframe
+        [JsonProperty]
+        public Snap snap;
+
+        public Keyframe()
+        {
+            snap = new Snap(0f);
+        }
+
+        public void Move(GameObject obj, float time)
         {
             var keys = obj.GetComponent<KeyframedObject>();
-            keys.Add(k);
+            keys.Remove(this);
+            this.snap = new Snap(ReplayAPI.CurrentTime);
+            keys.Add(this);
         }
+
+        public abstract Keyframe Capture(GameObject obj);
+        public abstract void Apply(GameObject obj, float t);
         
         /// <summary>
         /// Safety: This must be of type T 
@@ -40,26 +79,26 @@ public class KeyframedObject : MonoBehaviour
         /// <param name="time"></param>
         /// <param name="def"></param>
         /// <returns></returns>
-        public static T? Next<T>(KeyframedObject keys, float time, T? def) where T : Keyframe
+        public static T? Next<T>(KeyframedObject keys, Snap snap, T? def) where T : Keyframe
         {
-            return (T?)Next(typeof(T), keys, time) ?? def;
+            return (T?)Next(typeof(T), keys, snap) ?? def;
         }
 
-        public static Keyframe? Previous(Type type, KeyframedObject keys, float time)
+        public static Keyframe? Previous(Type type, KeyframedObject keys, Snap snap)
         {
             var frames = keys.Channels.GetValueOrDefault(type);
-            return frames?.Values.LastOrDefault((k) => k != null && k.Time() <= time);
+            return frames?.Values.LastOrDefault((k) => k != null && k.snap <= snap);
         }
 
-        public static Keyframe? Next(Type type, KeyframedObject keys, float time)
+        public static Keyframe? Next(Type type, KeyframedObject keys, Snap snap)
         {
             var frames = keys.Channels.GetValueOrDefault(type);
-            return frames?.Values.FirstOrDefault((k) => k != null && k.Time() > time);
+            return frames?.Values.FirstOrDefault((k) => k != null && k.snap > snap);
         }
 
         public float tValue(Keyframe next, float time)
         {
-            return System.Math.Clamp(Time() == next.Time() ? 0 : (time - Time()) / (next.Time() - Time()), 0f, 1f);
+            return System.Math.Clamp(snap == next.snap ? 0 : (time - snap.Time()) / (next.snap.Time() - snap.Time()), 0f, 1f);
         }
     }
 
@@ -68,21 +107,20 @@ public class KeyframedObject : MonoBehaviour
     {
         Vector3 data;
 
-        public override void Capture(GameObject obj, float time)
+        public override Keyframe Capture(GameObject obj)
         {
-            var capture = new PositionKeyFrame
+            return new PositionKeyFrame
             {
                 data = obj.transform.position,
-                time = time
+                snap = new Snap(ReplayAPI.CurrentTime),
             };
-            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
         {
-            MelonLogger.Msg($"pos: {data} | this.time: {this.time} | time: {time}");
+            MelonLogger.Msg($"pos: {data} | this.snap: {snap} | time: {time}");
             var tm = obj.transform;
-            var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
+            var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
 
             tm.position = Vector3.Lerp(data, next.data, tValue(next, time));
         }
@@ -93,20 +131,19 @@ public class KeyframedObject : MonoBehaviour
     {
         Quaternion data;
 
-        public override void Capture(GameObject obj, float time)
+        public override Keyframe Capture(GameObject obj)
         {
-            var capture = new RotationKeyFrame
+            return new RotationKeyFrame
             {
-                time = time,
+                snap = new Snap(ReplayAPI.CurrentTime),
                 data = obj.transform.rotation
             };
-            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
         {
             var tm = obj.transform;
-            var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
+            var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
 
             tm.rotation = Quaternion.Slerp(data, next.data, tValue(next, time));
         }
@@ -117,38 +154,40 @@ public class KeyframedObject : MonoBehaviour
     {
         float data;
 
-        public override void Capture(GameObject obj, float time)
+        public override Keyframe Capture(GameObject obj)
         {
-            var capture = new FovKeyFrame
+            return new FovKeyFrame
             {
-                time = time,
+                snap = new Snap(ReplayAPI.CurrentTime),
                 data = obj.GetComponent<Camera>().fieldOfView
             };
-            SaveCapture(obj, capture);
         }
 
         public override void Apply(GameObject obj, float time)
         {
             var tm = obj.GetComponent<Camera>();
-            var next = Next(obj.GetComponent<KeyframedObject>(), Time(), this)!;
+            var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
 
             tm.fieldOfView = Mathf.Lerp(data, next.data, tValue(next, time));
         }
     }
 
-    public Dictionary<Type, SortedList<float, Keyframe>> Channels = new();
+    [JsonProperty]
+    public Dictionary<Type, SortedList<Keyframe.Snap, Keyframe>> Channels = new();
     
     [JsonIgnore]
     Dictionary<Type, Keyframe> constructors = new();
 
     void Start()
     {
-        ReplayAPI.onReplaySeeked += Apply;
+        MelonLogger.Msg("RegKFO");
+        ReplayAPI.onReplayTimeChanged += Apply;
     }
 
-    void Destroy()
+    void OnDestroy()
     {
-        ReplayAPI.onReplaySeeked -= Apply;
+        MelonLogger.Msg("DeregKFO");
+        ReplayAPI.onReplayTimeChanged -= Apply;
     }
 
     void Apply(float time)
@@ -157,18 +196,32 @@ public class KeyframedObject : MonoBehaviour
 
         foreach (var (type, _) in Channels)
         {
-            var frame = Keyframe.Previous(type, this, time) ?? Keyframe.Next(type, this, time);
+            var frame = Keyframe.Previous(type, this, new Keyframe.Snap(time)) ?? Keyframe.Next(type, this, new Keyframe.Snap(time));
             frame?.Apply(gameObject, time);
         }
     }
 
+    protected void EnsureErased(Type t)
+    {
+        if (t == typeof(Keyframe))
+        {
+            throw new Exception("Lost Rich type K of Keyframe!");
+        }
+        if (!Channels.ContainsKey(t))
+        {
+            Channels[t] = new();
+        }
+    }
     protected void Ensure<K>() where K : Keyframe
     {
+        if (typeof(K) == typeof(Keyframe))
+        {
+            throw new Exception("Lost Rich type K of Keyframe!");
+        }
         if (!Channels.ContainsKey(typeof(K)))
         {
             Channels[typeof(K)] = new();
         }
-        
     }
     protected void Register<K>() where K : Keyframe, new()
     {
@@ -179,63 +232,67 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
-    public void Add<K>(K keyframe) where K : Keyframe
+    public void Add(Keyframe keyframe)
     {
-        Ensure<K>();
-        Channels[typeof(K)].Remove(keyframe.Time());
-        Channels[typeof(K)].Add(keyframe.Time(), keyframe);
+        Type t = keyframe.GetType();
+        EnsureErased(t);
+        RemoveAt(t, keyframe.snap);
+        Channels[t].Add(keyframe.snap, keyframe);
     }
 
-    //
-    // use like
-    // ```
-    // keyframes.Capture<PositionKeyFrame>();
-    // keyframes.Capture<RotationKeyframe, FovKeyFrame>();
-    // ```
-    //
     /// <summary>
-    /// Capure a keyframe and save it to a channel
+    /// Capture a new Keyframe and save it to the timeline
+    /// This is one of 2 ways to create a keyframe
     /// </summary>
-    /// <typeparam name="K"></typeparam>
-    /// <param name="time"></param>
-    public void Capture<K>(float? time) where K : Keyframe, new()
+    /// <typeparam name="K">Type of keyframe to save</typeparam>
+    /// <returns></returns>
+    public TimelineController.KeyframeMarker Capture<K>() where K : Keyframe, new()
     {
         Register<K>();
-        constructors[typeof(K)].Capture(gameObject, time ?? ReplayAPI.CurrentTime);
+        var keyframe = constructors[typeof(K)].Capture(gameObject);
+        Add(keyframe);
+        return new TimelineController.KeyframeMarker(gameObject, keyframe);
     }
+
     public void Capture<K1, K2>()
         where K1 : Keyframe, new()
         where K2 : Keyframe, new()
     {
-        float time = ReplayAPI.CurrentTime;
-        Capture<K1>(time);
-        Capture<K2>(time);        
+        Capture<K1>();
+        Capture<K2>();        
     }
     public void Capture<K1, K2, K3>()
         where K1 : Keyframe, new()
         where K2 : Keyframe, new()
         where K3 : Keyframe, new()
     {
-        float time = ReplayAPI.CurrentTime;
-        Capture<K1>(time);
-        Capture<K2>(time);        
-        Capture<K3>(time);        
+        Capture<K1>();
+        Capture<K2>();        
+        Capture<K3>();        
     }
-    
 
     public K? Next<K>(float time) where K : Keyframe
     {
-        return (K?)Keyframe.Next(typeof(K), this, time);
+        return (K?)Keyframe.Next(typeof(K), this, new Keyframe.Snap(time));
     }
 
     public K? Previous<K>(float time) where K : Keyframe
     {
-        return (K?)Keyframe.Previous(typeof(K), this, time);
+        return (K?)Keyframe.Previous(typeof(K), this, new Keyframe.Snap(time));
     }
 
-    public void Remove<K>(K keyframe) where K : Keyframe
+    protected void RemoveAt(Type t, Keyframe.Snap snap)
     {
-        Ensure<K>();
-        Channels[typeof(K)].Remove(keyframe.Time());
+        EnsureErased(t);
+        var k = Channels[t].GetValueOrDefault(snap);
+        if (k != null)
+        {
+            Channels[t].Remove(snap);
+        }
+    }
+
+    public void Remove(Keyframe keyframe)
+    {
+        RemoveAt(keyframe.GetType(), keyframe.snap);
     }
 }
