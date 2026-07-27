@@ -1,4 +1,4 @@
-﻿using Il2CppMS.Internal.Xml.XPath;
+using Il2CppMS.Internal.Xml.XPath;
 using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;
@@ -11,12 +11,11 @@ namespace ReplayStudio.Components;
 
 #nullable enable
 [RegisterTypeInIl2Cpp]
-[JsonObject(MemberSerialization.OptIn)]
 public class KeyframedObject : MonoBehaviour
 {
+    [Serializable]
     public abstract class Keyframe
     {
-        [JsonProperty]
         protected float time;
 
         public abstract void Capture(GameObject obj, float time);
@@ -48,13 +47,13 @@ public class KeyframedObject : MonoBehaviour
 
         public static Keyframe? Previous(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.channels.GetValueOrDefault(type);
+            var frames = keys.Channels.GetValueOrDefault(type);
             return frames?.Values.LastOrDefault((k) => k != null && k.Time() <= time);
         }
 
         public static Keyframe? Next(Type type, KeyframedObject keys, float time)
         {
-            var frames = keys.channels.GetValueOrDefault(type);
+            var frames = keys.Channels.GetValueOrDefault(type);
             return frames?.Values.FirstOrDefault((k) => k != null && k.Time() > time);
         }
 
@@ -67,7 +66,6 @@ public class KeyframedObject : MonoBehaviour
     [Serializable]
     public class PositionKeyFrame : Keyframe
     {
-        [JsonProperty]
         Vector3 data;
 
         public override void Capture(GameObject obj, float time)
@@ -93,7 +91,6 @@ public class KeyframedObject : MonoBehaviour
     [Serializable]
     public class RotationKeyFrame : Keyframe
     {
-        [JsonProperty]
         Quaternion data;
 
         public override void Capture(GameObject obj, float time)
@@ -118,7 +115,6 @@ public class KeyframedObject : MonoBehaviour
     [Serializable]
     public class FovKeyFrame : Keyframe
     {
-        [JsonProperty]
         float data;
 
         public override void Capture(GameObject obj, float time)
@@ -140,10 +136,10 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
-    [JsonProperty]
-    Dictionary<Type, SortedList<float, Keyframe>> channels = new();
+    public Dictionary<Type, SortedList<float, Keyframe>> Channels = new();
+    
+    [JsonIgnore]
     Dictionary<Type, Keyframe> constructors = new();
-
 
     void Start()
     {
@@ -159,7 +155,7 @@ public class KeyframedObject : MonoBehaviour
     {
         if (!enabled) return;
 
-        foreach (var (type, _) in channels)
+        foreach (var (type, _) in Channels)
         {
             var frame = Keyframe.Previous(type, this, time) ?? Keyframe.Next(type, this, time);
             frame?.Apply(gameObject, time);
@@ -168,9 +164,9 @@ public class KeyframedObject : MonoBehaviour
 
     protected void Ensure<K>() where K : Keyframe
     {
-        if (!channels.ContainsKey(typeof(K)))
+        if (!Channels.ContainsKey(typeof(K)))
         {
-            channels[typeof(K)] = new();
+            Channels[typeof(K)] = new();
         }
         
     }
@@ -186,8 +182,8 @@ public class KeyframedObject : MonoBehaviour
     public void Add<K>(K keyframe) where K : Keyframe
     {
         Ensure<K>();
-        channels[typeof(K)].Remove(keyframe.Time());
-        channels[typeof(K)].Add(keyframe.Time(), keyframe);
+        Channels[typeof(K)].Remove(keyframe.Time());
+        Channels[typeof(K)].Add(keyframe.Time(), keyframe);
     }
 
     //
@@ -240,6 +236,6 @@ public class KeyframedObject : MonoBehaviour
     public void Remove<K>(K keyframe) where K : Keyframe
     {
         Ensure<K>();
-        channels[typeof(K)].Remove(keyframe.Time());
+        Channels[typeof(K)].Remove(keyframe.Time());
     }
 }

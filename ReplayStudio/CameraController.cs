@@ -1,5 +1,7 @@
-﻿using ReplayStudio.Components;
+using ReplayMod.Replay;
+using ReplayStudio.Components;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 
 namespace ReplayStudio
@@ -10,9 +12,11 @@ namespace ReplayStudio
         public static AudioListener AudioListener;
         public static KeyframedObject KeyframeComponent;
 
+        public static GameObject CameraModel;
+
 
         public static bool Enabled = false;
-        public static bool Mapped = false;
+        public static bool DoMapping = false;
 
         public static void InitializeCamera()
         {
@@ -23,7 +27,6 @@ namespace ReplayStudio
             Camera = cameraGo.AddComponent<Camera>();
             AudioListener = cameraGo.AddComponent<AudioListener>();
             KeyframeComponent = cameraGo.AddComponent<KeyframedObject>();
-            Core.StudioData.CameraKeyframeComponent = KeyframeComponent;
             Camera.GetUniversalAdditionalCameraData().allowXRRendering = false;
 
             Camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
@@ -31,30 +34,48 @@ namespace ReplayStudio
             Camera.transform.position = Vector3.zero; // TODO
             Camera.transform.rotation = Quaternion.identity; // TODO
 
+            Camera.nearClipPlane = 0.001f;
+
             Camera.enabled = Enabled;
             AudioListener.enabled = Enabled;
+
+
+            if (CameraModel == null)
+                CameraModel = Core.DDOL_GameObjects.transform.GetChild(4).gameObject;
+            CameraModel.SetActive(true);
+            CameraModel.transform.SetParent(Camera.transform);
+            CameraModel.transform.localPosition = Vector3.zero;
+            CameraModel.transform.localRotation = Quaternion.Euler(270f, 180f, 0f);
         }
 
         public static void RemoveCamera()
         {
             if (Camera == null) return;
 
+            Camera.transform.DetachChildren();
             GameObject.Destroy(Camera.gameObject);
             Camera = null;
         }
 
-        public static void EnterCamera()
+        public static void EnterCamera(bool snapView)
         {
+            ViewController.StoreViewCamTransform();
+
             Enabled = false;
             if (Camera == null) return;
 
             Camera.enabled = true;
             AudioListener.enabled = true;
             Enabled = true;
+
+            ViewController.ViewCamTransform.position = Camera.transform.position;
+            ViewController.ViewCamTransform.rotation = Camera.transform.rotation;
         }
 
         public static void ExitCamera()
         {
+            ViewController.ReapplyViewCamTransform();
+
             Enabled = false;
             if (Camera == null) return;
 
@@ -68,7 +89,7 @@ namespace ReplayStudio
 
             CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
             CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
-            CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+            //CameraController.Camera.fieldOfView = ViewController.ViewFOV;
         }
     }
 }

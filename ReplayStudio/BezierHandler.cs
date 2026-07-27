@@ -1,4 +1,4 @@
-﻿using Il2CppPlayFab.MultiplayerModels;
+using Il2CppPlayFab.MultiplayerModels;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,8 @@ namespace ReplayStudio;
  *           - handle: a point for defining the curve
  */
 
-// https://github.com/shamim-akhtar/bezier-curve//[RegisterTypeInIl2Cpp]
+// https://github.com/shamim-akhtar/bezier-curve
+//[RegisterTypeInIl2Cpp]
 public class BezierCurve
 {
                         public static Vector3 Point3(float t, List<Vector3> controlPoints)

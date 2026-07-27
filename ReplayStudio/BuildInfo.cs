@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 
 [assembly: MelonInfo(typeof(ReplayStudio.Core), ReplayStudio.BuildInfo.Name, ReplayStudio.BuildInfo.Version, ReplayStudio.BuildInfo.Author)]
 [assembly: MelonGame("Buckethead Entertainment", "RUMBLE")]

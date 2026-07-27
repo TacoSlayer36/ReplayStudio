@@ -1,4 +1,4 @@
-﻿using Il2CppSystem.Security.Cryptography;
+using Il2CppSystem.Security.Cryptography;
 using MelonLoader;
 using ReplayMod.Replay.Files;
 using ReplayMod.Replay.Serialization;

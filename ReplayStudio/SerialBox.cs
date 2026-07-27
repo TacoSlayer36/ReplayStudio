@@ -1,17 +1,22 @@
-﻿using Newtonsoft.Json;
-using ReplayStudio.Components;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+using static ReplayStudio.Components.KeyframedObject;
 
 namespace ReplayStudio
 {
     [Serializable]
     public class StudioData
     {
-        public KeyframedObject CameraKeyframeComponent = new();
+        Dictionary<Type, SortedList<float, Keyframe>> CameraKeyframes
+        {
+            get
+            {
+                return CameraController.KeyframeComponent.Channels;
+            }
+            set
+            {
+                CameraController.KeyframeComponent.Channels = value;
+            }
+        }
     }
 }
