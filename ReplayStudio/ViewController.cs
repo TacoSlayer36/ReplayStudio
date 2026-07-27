@@ -5,7 +5,6 @@ using Il2CppRUMBLE.Utilities;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Il2CppRUMBLE.Managers;
-using ReplayMod.Core;
 using Il2CppRUMBLE.Players;
 using System;
 using UnityEngine.Rendering;
@@ -51,13 +50,15 @@ namespace ReplayStudio;
 	public static float DOFDistance = 5f;
 	public static Volume DOFComponent;
 
+	public static Vector3 storedViewCamPos;
+	public static Vector2 storedViewRot;
+	public static Vector3 storedOrbitCamFocus;
+	public static float storedOrbitCamDist;
+
 	static bool isDraggingView = false;
 
 	public static Camera LegacyCamRef => RecordingCamera.Instance?.LegacyCamera;
 	public static AudioListener LegacyCamListener;
-
-	static Vector3 PlayerPos;
-	static Quaternion PlayerRot;
 
 	public static void InitializeCamera(ViewMode? mode = null)
 	{
@@ -267,7 +268,23 @@ namespace ReplayStudio;
 			ReplayMod.Core.Main.Playback?.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
 	}
 
-	public static void SetCameraMode(ViewMode mode)
+	public static void ReapplyViewCamTransform()
+	{
+		ViewCamTransform.position = storedViewCamPos;
+		ViewRot = storedViewRot;
+        OrbitCamFocus = storedOrbitCamFocus;
+		OrbitCamDist = storedOrbitCamDist;
+	}
+
+    public static void StoreViewCamTransform()
+    {
+        storedViewCamPos = ViewCamTransform.position;
+        storedViewRot = ViewRot;
+        storedOrbitCamFocus = OrbitCamFocus;
+        storedOrbitCamDist = OrbitCamDist;
+    }
+
+    public static void SetCameraMode(ViewMode mode)
 	{
 		cameraDataStorage.StoreData(LegacyCamRef, false);
 		LegacyCamRef.useOcclusionCulling = false;

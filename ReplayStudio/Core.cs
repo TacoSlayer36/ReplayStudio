@@ -9,6 +9,8 @@ using System.IO;
 using Newtonsoft.Json;
 using static ReplayStudio.HelperFunctions;
 using static ReplayStudio.Components.KeyframedObject;
+using UnityEngine.EventSystems;
+using Il2CppTMPro;
 
 /* TODO:
  * Crystals
@@ -70,6 +72,8 @@ namespace ReplayStudio;
 
         if (ReplayAPI.IsPlaying)
         {
+            if (EventSystem.current?.currentSelectedGameObject?.GetComponent<TMP_InputField>() != null) return;
+
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
@@ -77,23 +81,34 @@ namespace ReplayStudio;
 
             if (Input.GetKeyDown(KeyCode.I))
             {
-                StudioData.CameraKeyframeComponent.Capture<PositionKeyFrame, RotationKeyFrame, FovKeyFrame>();
+                CameraController.KeyframeComponent.Capture<PositionKeyFrame, RotationKeyFrame, FovKeyFrame>();
                 SaveStudioData();
             }
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (CameraController.Enabled) CameraController.ExitCamera();
-                else CameraController.EnterCamera();
+                if (CameraController.Enabled)
+                {
+                    CameraController.ExitCamera();
+                    CameraController.DoMapping = false;
+                }
+                else
+                {
+                    CameraController.EnterCamera(true);
+                    CameraController.DoMapping = true;
+                }
             }
-
-            //if (CameraController.Mapped) CameraController.MapCamera();
 
             if (IsPressingAny(ControlKeys) && IsPressingAny(AltKeys) && Input.GetKeyDown(KeyCode.C))
             {
                 CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
                 CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
                 CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+            }
+
+            if (ReplayAPI.IsPaused && CameraController.DoMapping)
+            {
+                CameraController.MapCamera();
             }
         }
     }
@@ -183,7 +198,8 @@ namespace ReplayStudio;
         string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
         string studioDataPath = Path.Combine(directory, replayName + ".json");
         
-        string serializedJson = JsonConvert.SerializeObject(StudioData, Formatting.Indented);
+        string serializedJson = JsonConvert.SerializeObject(CameraController.KeyframeComponent.Channels, Formatting.Indented);
+        MelonLogger.Msg(serializedJson);
 
         File.WriteAllText(studioDataPath, serializedJson);
     }
