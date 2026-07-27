@@ -71,6 +71,9 @@ public class Core : MelonMod
         if (!UIManager.IsHoveringAny)
             ViewController.HandleViewCam();
 
+        if (!UIManager.IsHoveringAny)
+            CameraController.HandleCamera();
+
         if (ReplayAPI.IsPlaying)
         {
             if (EventSystem.current?.currentSelectedGameObject?.GetComponent<TMP_InputField>() != null) return;
@@ -105,11 +108,6 @@ public class Core : MelonMod
                 CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
                 CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
                 CameraController.Camera.fieldOfView = ViewController.ViewFOV;
-            }
-
-            if (ReplayAPI.IsPaused && CameraController.DoMapping)
-            {
-                CameraController.MapCamera();
             }
         }
     }

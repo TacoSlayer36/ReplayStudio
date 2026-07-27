@@ -19,19 +19,11 @@ public class MouseDetector : MonoBehaviour
 
         if (RectTransformUtility.RectangleContainsScreenPoint(rt, screenPoint, null))
         {
-            if (!IsHovering)
-            {
-                IsHovering = true;
-            }
+            IsHovering = true;
 
             if (Input.GetMouseButtonDown(0))
             {
                 HeldFromHovering = true;
-            }
-
-            if (Input.GetMouseButtonUp(0))
-            {
-                HeldFromHovering = false;
             }
         }
         else
@@ -39,7 +31,7 @@ public class MouseDetector : MonoBehaviour
             IsHovering = false;
         }
 
-        if (Input.GetMouseButtonUp(0))
+        if (!Input.GetMouseButton(0))
         {
             HeldFromHovering = false;
         }
@@ -47,8 +39,6 @@ public class MouseDetector : MonoBehaviour
 
     public Vector2 GetHoverPos()
     {
-        if (!IsHovering) return Vector2.zero;
-
         Vector2 screenPoint = Input.mousePosition;
         Canvas canvas = GetComponentInParent<Canvas>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, screenPoint, null, out Vector2 localPoint);

@@ -18,6 +18,14 @@ namespace ReplayStudio
         public static bool Enabled = false;
         public static bool DoMapping = false;
 
+        public static void HandleCamera()
+        {
+            if ((ReplayAPI.IsPaused || !ReplayAPI.IsPlaying) && DoMapping)
+            {
+                CameraController.MapCamera();
+            }
+        }
+
         public static void InitializeCamera()
         {
             if (Camera != null) RemoveCamera(); // This is a singleton
