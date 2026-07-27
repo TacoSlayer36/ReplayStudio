@@ -1,4 +1,4 @@
-﻿using Il2CppMS.Internal.Xml.XPath;
+using Il2CppMS.Internal.Xml.XPath;
 using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;

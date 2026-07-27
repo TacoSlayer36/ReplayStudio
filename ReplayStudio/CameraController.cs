@@ -1,4 +1,4 @@
-﻿using ReplayMod.Replay;
+using ReplayMod.Replay;
 using ReplayStudio.Components;
 using UnityEngine;
 using UnityEngine.EventSystems;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using static ReplayStudio.HelperFunctions;
 using UnityEngine;
 using Il2CppRUMBLE.Utilities;
@@ -11,7 +11,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 namespace ReplayStudio;
-public static class ViewController
+
+public static class ViewController
 {
 	public static bool IsViewCamEnabled = false;
 	public static float ViewFOV = 75f;

@@ -1,4 +1,4 @@
-﻿using Il2CppRUMBLE.Managers;
+using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Utilities;
 using Il2CppTMPro;
 using MelonLoader;

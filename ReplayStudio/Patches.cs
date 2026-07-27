@@ -1,4 +1,4 @@
-﻿using Il2CppRUMBLE.Players.Subsystems;
+using Il2CppRUMBLE.Players.Subsystems;
 using Il2CppRUMBLE.Players;
 using MelonLoader;
 using System;

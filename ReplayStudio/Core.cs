@@ -1,4 +1,4 @@
-﻿using Il2CppRUMBLE.Managers;
+using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using MelonLoader;
 using UnityEngine;
@@ -17,7 +17,8 @@ using Il2CppTMPro;
  */
 
 namespace ReplayStudio;
-public class Core : MelonMod
+
+public class Core : MelonMod
 {
     public static Core Instance;
     public static ReplayMod.Core.Main ReplayModMain;

@@ -1,4 +1,4 @@
-﻿using Il2CppMichsky.UI.ModernUIPack;
+using Il2CppMichsky.UI.ModernUIPack;
 using Il2CppOculus.Platform;
 using Il2CppTMPro;
 using MelonLoader;

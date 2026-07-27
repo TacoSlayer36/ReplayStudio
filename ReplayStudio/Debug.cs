@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using Il2CppTMPro;
 using UnityEngine;
 
