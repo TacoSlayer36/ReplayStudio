@@ -294,6 +294,17 @@ public class KeyframedObject : MonoBehaviour
         Capture<K3>();        
     }
 
+    public void InitializeAllMarkers()
+    {
+        foreach (var (type, sortedList) in Channels)
+        {
+            foreach (var (snap, keyframe) in sortedList)
+            {
+                new TimelineController.KeyframeMarker(CameraController.Camera.gameObject, keyframe);
+            }
+        }
+    }
+
     public K? Next<K>(float time) where K : Keyframe
     {
         return (K?)Keyframe.Next(typeof(K), this, new Keyframe.Snap(time));

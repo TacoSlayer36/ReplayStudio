@@ -1,14 +1,18 @@
 ﻿using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
-using MelonLoader;
-using UnityEngine;
-using ReplayMod.Replay.Serialization;
-using ReplayMod.Replay;
-using System.IO;
-using Newtonsoft.Json;
-using UnityEngine.EventSystems;
 using Il2CppTMPro;
+using MelonLoader;
+using Newtonsoft.Json;
+using ReplayMod.Core;
+using ReplayMod.Replay;
+using ReplayMod.Replay.Serialization;
 using ReplayStudio.Components;
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.EventSystems;
 
 /* TODO:
  * Crystals
@@ -20,6 +24,8 @@ public class Core : MelonMod
 {
     public static Core Instance;
     public static ReplayMod.Core.Main ReplayModMain;
+    public static string CurrentReplayPath; // Set via a harmony patch :(
+    const string saveFileName = "replay_studio.json";
 
     public static StudioData StudioData;
 
@@ -184,36 +190,61 @@ public class Core : MelonMod
 
     internal void LoadStudioData()
     {
-        string directory = ReplayAPI.CurrentFolder;
-        string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
-        string studioDataPath = Path.Combine(directory, replayName + ".json");
-
-        if (File.Exists(studioDataPath))
+        if (File.Exists(CurrentReplayPath))
         {
-            StudioData = JsonConvert.DeserializeObject<StudioData>(File.ReadAllText(studioDataPath), settings);
+            string fileContent = string.Empty;
+            using (ZipArchive archive = ZipFile.OpenRead(CurrentReplayPath))
+            {
+                ZipArchiveEntry entry = archive.GetEntry(saveFileName);
+                if (entry != null)
+                {
+                    using (Stream stream = entry.Open())
+                    using (StreamReader reader = new(stream))
+                    {
+                        fileContent = reader.ReadToEnd();
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(fileContent))
+            {
+                StudioData = JsonConvert.DeserializeObject<StudioData>(fileContent, settings);
+            }
         }
         else
         {
             StudioData = new();
         }
 
-        foreach (var (type, sortedList) in StudioData.CameraKeyframes)
-        {
-            foreach (var (snap, keyframe) in sortedList)
-            {
-                new TimelineController.KeyframeMarker(CameraController.Camera.gameObject, keyframe);
-            }
-        }
+        CameraController.KeyframeComponent.InitializeAllMarkers();
     }
 
     internal void SaveStudioData()
     {
-        string directory = ReplayAPI.CurrentFolder;
-        string replayName = Utilities.CleanName(ReplayAPI.CurrentReplay.Header.Title);
-        string studioDataPath = Path.Combine(directory, replayName + ".json");
-
         string serializedJson = JsonConvert.SerializeObject(StudioData, Formatting.Indented, settings);
 
-        File.WriteAllText(studioDataPath, serializedJson);
+        using (FileStream archiveToOpen = new FileStream(CurrentReplayPath, FileMode.OpenOrCreate))
+        using (ZipArchive archive = new(archiveToOpen, ZipArchiveMode.Update))
+        {
+            ZipArchiveEntry existingEntry = archive.GetEntry(saveFileName);
+            if (existingEntry != null)
+            {
+                existingEntry.Delete();
+            }
+
+            ZipArchiveEntry newEntry = archive.CreateEntry(saveFileName);
+            using (StreamWriter writer = new StreamWriter(newEntry.Open()))
+            {
+                writer.Write(serializedJson);
+            }
+        }
+    }
+
+    [HarmonyLib.HarmonyPatch(typeof(ReplayPlayback), nameof(ReplayPlayback.LoadReplay), new Type[] { typeof(string), typeof(bool) })]
+    public static class Patch_ReplayPlayback_LoadReplay
+    {
+        private static void Postfix(string path, bool allowDifferentSceneLoad)
+        {
+            CurrentReplayPath = path;
+        }
     }
 }
