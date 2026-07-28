@@ -1,4 +1,4 @@
-﻿using Il2CppRUMBLE.Managers;
+using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players;
 using Il2CppTMPro;
 using MelonLoader;
@@ -95,10 +95,7 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.I))
             {
-                CameraController.KeyframeComponent.Capture<
-                    KeyframedObject.PositionKeyFrame, 
-                    KeyframedObject.RotationKeyFrame,
-                    KeyframedObject.FovKeyFrame>();
+                CameraController.KeyframeComponent.Capture<KeyframedObject.DollyKeyFrame, KeyframedObject.FovKeyFrame>();
                 SaveStudioData();
             }
 

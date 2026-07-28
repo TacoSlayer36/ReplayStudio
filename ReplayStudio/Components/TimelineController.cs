@@ -1,4 +1,4 @@
-﻿using Il2CppTMPro;
+using Il2CppTMPro;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
