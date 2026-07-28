@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;
 using System;
@@ -95,7 +95,13 @@ public class KeyframedObject : MonoBehaviour
             keys.Add(this);
         }
 
+        /// <summary>
+        /// Must return an instance of this
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public abstract Keyframe Capture(GameObject obj);
+
         public abstract void Apply(GameObject obj, float t);
         
         /// <summary>
@@ -149,6 +155,44 @@ public class KeyframedObject : MonoBehaviour
             var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
 
             tm.position = Vector3.Lerp(data, next.data, tValue(next, time));
+        }
+    }
+
+    public class DollyKeyFrame : Keyframe
+    {
+        [JsonProperty]
+        Vector3 focus;
+        [JsonProperty]
+        Quaternion rotation;
+        [JsonProperty]
+        float distance;
+
+        public override Keyframe Capture(GameObject obj)
+        {
+            var d = obj.GetComponent<CameraRig>()?.Distance ?? 5;
+            return new DollyKeyFrame
+            {
+                distance = d,
+                focus = inverse(obj.transform, d),
+                rotation = obj.transform.rotation,
+                snap = new Snap(ReplayAPI.CurrentTime),
+            };
+        }
+
+        public override void Apply(GameObject obj, float time)
+        {
+            var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
+            var f = Vector3.Lerp(focus, next.focus, tValue(next, time));
+            var d = Mathf.Lerp(distance, next.distance, tValue(next, time));
+            var r = Quaternion.Slerp(rotation, next.rotation, tValue(next, time));
+
+            obj.transform.rotation = r;
+            obj.transform.position = f - (r * Vector3.forward * d);
+        }
+
+        static Vector3 inverse(Transform transform, float distance)
+        {
+            return transform.position + (transform.rotation * Vector3.forward * distance);
         }
     }
 
