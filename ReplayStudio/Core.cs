@@ -68,6 +68,15 @@ public class Core : MelonMod
 
     public override void OnUpdate()
     {
+        if (Rendering.RENDERING)
+        {
+            if (Input.GetKey(KeyCode.Escape))
+            {
+                Rendering.StopRender();
+            }
+            return;
+        }
+
         if (!GlobalInit || !IsSceneReady) return;
 
         if (Input.GetKeyDown(KeyCode.F1))
@@ -119,6 +128,12 @@ public class Core : MelonMod
                 }
             }
         }
+    }
+
+    public override void OnLateUpdate()
+    {
+        if (Rendering.RENDERING)
+            Rendering.HandleRendering();
     }
 
     public override void OnFixedUpdate()
