@@ -125,6 +125,11 @@ public class Core : MelonMod
                 ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
             }
 
+            if (Input.GetKeyDown(KeyCode.Delete)) {
+                TimelineController.Instance.DeletePrevKeyframeMarker();
+            }
+
+
             if (Input.GetKeyDown(KeyCode.I))
             {
                 CameraController.KeyframeComponent.Capture<BezierKeyframe, KeyframedObject.RotationKeyFrame, KeyframedObject.FovKeyFrame>();

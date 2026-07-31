@@ -348,8 +348,21 @@ public partial class TimelineController : MonoBehaviour
 		if (keyframes.ContainsKey(marker.keyframe.snap))
 		{
 			keyframes[marker.keyframe.snap].Remove(marker);
+			if (keyframes[marker.keyframe.snap].Count == 0) {
+				keyframes.Remove(marker.keyframe.snap);
+			}
 		}
 	}
+
+	public void DeletePrevKeyframeMarker() {
+		var snap = new KeyframedObject.Keyframe.Snap(ReplayAPI.CurrentTime);
+		var toDelete = new List<KeyframeMarker>(keyframes.LastOrDefault((t) => t.Key <= snap && t.Value.Count != 0).Value);
+		
+		foreach (var keyframe in toDelete) {
+			keyframe.Remove();
+		}
+	}
+
 
 	public IEnumerable<KeyframeMarker> GetKeyframeMarkers(float time)
 	{
