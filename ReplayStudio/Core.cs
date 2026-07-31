@@ -127,7 +127,7 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.I))
             {
-                CameraController.KeyframeComponent.Capture<KeyframedObject.DollyKeyFrame, KeyframedObject.FovKeyFrame>();
+                CameraController.KeyframeComponent.Capture<BezierKeyframe, KeyframedObject.RotationKeyFrame, KeyframedObject.FovKeyFrame>();
                 SaveStudioData();
             }
 
