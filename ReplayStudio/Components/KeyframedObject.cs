@@ -72,6 +72,20 @@ public class KeyframedObject : MonoBehaviour
                 return time - other?.time ?? 0;
             }
 
+            public static Snap operator+(Snap lhs, int rhs)
+            {
+                return new Snap(0f) {
+                    time = lhs.time + rhs,
+                };
+            }
+
+            public static Snap operator-(Snap lhs, int rhs)
+            {
+                return new Snap(0f) {
+                    time = lhs.time - rhs,
+                };
+            }
+
             public float Time()
             {
                 return (float)time / DIV;
@@ -87,7 +101,7 @@ public class KeyframedObject : MonoBehaviour
             snap = new Snap(0f);
         }
 
-        public void Move(GameObject obj, float time)
+        public virtual void Move(GameObject obj, float time)
         {
             var keys = obj.GetComponent<KeyframedObject>();
             keys.Remove(this);
@@ -102,7 +116,7 @@ public class KeyframedObject : MonoBehaviour
         /// <returns></returns>
         public abstract Keyframe Capture(GameObject obj);
 
-        public abstract void Apply(GameObject obj, float t);
+        public abstract void Apply(GameObject obj, float time);
         
         /// <summary>
         /// Safety: This must be of type T 

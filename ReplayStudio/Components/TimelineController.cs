@@ -253,6 +253,12 @@ public partial class TimelineController : MonoBehaviour
 
 		foreach (var marker in markers)
 			marker.UpdateLocation();
+
+		foreach (var (_, channel) in this.keyframes) {
+			foreach (var marker in channel) {
+				marker.UpdateLocation();
+			}
+		}
 	}
 
 	public void InitializeSegments()

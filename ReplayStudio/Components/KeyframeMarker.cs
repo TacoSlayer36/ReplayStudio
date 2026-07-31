@@ -44,7 +44,7 @@ public partial class TimelineController : MonoBehaviour {
         //     InitializeRenderer();
         // }
 
-        protected void UpdateLocation()
+        public void UpdateLocation()
         {
             Vector2 pos = rectTransform.anchoredPosition;
             pos.x = TimelineController.Instance.DurationToTimelinePos(keyframe.snap.Time()) * Screen.width;
