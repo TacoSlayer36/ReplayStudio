@@ -133,7 +133,7 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (HelperFunctions.IsPressingAny(HelperFunctions.ControlKeys) && HelperFunctions.IsPressingAny(HelperFunctions.AltKeys) && Input.GetKeyDown(KeyCode.C))
+                if (HelperFunctions.IsPressingAny(HelperFunctions.AltKeys))
                 {
                     CameraController.MapCamera();
                     CameraController.EnterCamera(true);
