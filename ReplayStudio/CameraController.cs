@@ -40,7 +40,9 @@ namespace ReplayStudio
 
             MoveCameraToMapStart(Core.Instance.ActiveScene);
 
-            Camera.nearClipPlane = 0.001f;
+            Camera.nearClipPlane = ViewController.LegacyCamRef.nearClipPlane;
+            Camera.farClipPlane = ViewController.LegacyCamRef.farClipPlane;
+            Camera.useOcclusionCulling = false;
 
             Camera.enabled = Enabled;
             AudioListener.enabled = Enabled;
@@ -74,6 +76,8 @@ namespace ReplayStudio
 
             ViewController.ViewCamTransform.position = Camera.transform.position;
             ViewController.ViewCamTransform.rotation = Camera.transform.rotation;
+
+            CameraModel?.SetActive(false);
         }
 
         public static void ExitCamera()
@@ -86,6 +90,8 @@ namespace ReplayStudio
 
             Camera.enabled = false;
             AudioListener.enabled = false;
+
+            CameraModel?.SetActive(true);
         }
 
         public static void MapCamera()

@@ -95,8 +95,6 @@ public class Core : MelonMod
 
         if (ReplayAPI.IsPlaying)
         {
-            if (EventSystem.current?.currentSelectedGameObject?.GetComponent<TMP_InputField>() != null) return;
-
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
