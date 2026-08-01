@@ -153,6 +153,10 @@ class BezierKeyframe : KeyframedObject.Keyframe
             }
 
             var computed = Vector3.Normalize((dnext ?? Vector3.zero) - (dprev ?? Vector3.zero));
+            if (next != null && prev != null && Vector3.Dot(computed, next.Handle - prev.Handle) < 0) {
+                // special case: in-betweens can favor 'loops' where we would prefer just linear
+                computed = -computed;
+            }
 
             PreHandle = Vector3.back * (dprevWeight ?? 1);
             PostHandle = Vector3.forward * (dnextWeight ?? 1);
