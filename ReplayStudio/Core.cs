@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UIFramework;
 
 /* TODO:
  * Crystals
@@ -40,6 +41,14 @@ public class Core : MelonMod
     public static GameObject DDOL_GameObjects;
     public static GameObject LineTemplate;
 
+
+    public struct Settings {
+        internal const string USER_DATA = "UserData/ReplayStudio/Settings/";
+        internal const string CONFIG_FILE = "config.cfg";
+
+        public static MelonPreferences_Entry<bool> RenderBezierWidgets;
+    }
+
     public static JsonSerializerSettings settings = new JsonSerializerSettings()
     {
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
@@ -47,6 +56,20 @@ public class Core : MelonMod
     };
 
     internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
+
+    public override void OnInitializeMelon()
+    {
+        if (!Directory.Exists(Settings.USER_DATA))
+            Directory.CreateDirectory(Settings.USER_DATA);
+
+        string configPath = Path.Combine(Settings.USER_DATA, Settings.CONFIG_FILE);
+        var tmpFolder = MelonPreferences.CreateCategory("tmp");
+        tmpFolder.SetFilePath(configPath);
+        Settings.RenderBezierWidgets = tmpFolder.CreateEntry("Render_Bezier_Widgets", true, "Render Bezier Widgets", "Render the handle widgets for Bezier keyframes");
+
+        UI.RegisterMelon(this, tmpFolder);
+    }
+
 
     public override void OnLateInitializeMelon()
     {
@@ -100,15 +123,20 @@ public class Core : MelonMod
                 ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
             }
 
+            if (Input.GetKeyDown(KeyCode.Delete)) {
+                TimelineController.Instance.DeletePrevKeyframeMarker();
+            }
+
+
             if (Input.GetKeyDown(KeyCode.I))
             {
-                CameraController.KeyframeComponent.Capture<KeyframedObject.DollyKeyFrame, KeyframedObject.FovKeyFrame>();
+                CameraController.KeyframeComponent.Capture<BezierKeyframe, KeyframedObject.RotationKeyFrame, KeyframedObject.FovKeyFrame>();
                 SaveStudioData();
             }
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (HelperFunctions.IsPressingAny(HelperFunctions.ControlKeys) && HelperFunctions.IsPressingAny(HelperFunctions.AltKeys) && Input.GetKeyDown(KeyCode.C))
+                if (HelperFunctions.IsPressingAny(HelperFunctions.AltKeys))
                 {
                     CameraController.MapCamera();
                     CameraController.EnterCamera(true);
