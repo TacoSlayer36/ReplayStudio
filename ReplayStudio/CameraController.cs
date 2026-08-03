@@ -6,6 +6,7 @@ namespace ReplayStudio
 {
     public static class CameraController
     {
+        public static GameObject Object;   
         public static Camera Camera;   
         public static AudioListener AudioListener;
         public static KeyframedObject KeyframeComponent;
@@ -28,11 +29,12 @@ namespace ReplayStudio
         {
             if (Camera != null) RemoveCamera(); // This is a singleton
 
-            GameObject cameraGo = new GameObject("RenderCam");
+            Object = new GameObject("RenderCam");
 
-            Camera = cameraGo.AddComponent<Camera>();
-            AudioListener = cameraGo.AddComponent<AudioListener>();
-            KeyframeComponent = cameraGo.AddComponent<KeyframedObject>();
+            Camera = Object.AddComponent<Camera>();
+            AudioListener = Object.AddComponent<AudioListener>();
+            KeyframeComponent = Object.AddComponent<KeyframedObject>();
+            Object.AddComponent<CameraRig>();
             Camera.GetUniversalAdditionalCameraData().allowXRRendering = false;
 
             Camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;

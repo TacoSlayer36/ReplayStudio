@@ -59,22 +59,17 @@ class BezierKeyframe : KeyframedObject.Keyframe
         postHandle = new();
     }
 
-    ~BezierKeyframe() {
-        if (renderer != null) {
-            UnityEngine.Object.DestroyObject(renderer);
-            Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
-        }
-    }
-
     void UpdateRenderer(bool _oldvalue, bool enabled) {
         renderer?.SetActive(enabled);
     }
 
     /// <summary>
-    /// Capturing constructor
+    /// Renderer constructor
     /// </summary>
-    protected BezierKeyframe(GameObject obj) {
-        snap = new Snap(ReplayAPI.CurrentTime);
+    private BezierKeyframe(GameObject obj, Snap snap)
+    {
+        this.snap = snap;
+
         var r = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         {
             r.name = snap.Time().ToString();
@@ -84,7 +79,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             r.GetComponent<Collider>().excludeLayers = ~0;
             r.GetComponent<Collider>().includeLayers = 0;
             // GameObject.Destroy(r.GetComponent<Collider>());
-            // r.SetActive(true);
+            r.SetActive(Core.Settings.RenderBezierWidgets.Value);
             renderer = r;
 
             handle = renderer.transform;
@@ -121,13 +116,13 @@ class BezierKeyframe : KeyframedObject.Keyframe
 
             postHandle = post.transform;
         }
+    }
 
-
+    /// <summary>
+    /// Capturing constructor
+    /// </summary>
+    public BezierKeyframe(GameObject obj, BezierKeyframe? prev, BezierKeyframe? next) : this(obj, new Snap(ReplayAPI.CurrentTime)) {
         var position = obj.transform.position;
-
-        var prev = (BezierKeyframe?)Previous(typeof(BezierKeyframe), obj.GetComponent<KeyframedObject>(), snap - 1);
-
-        var next = (BezierKeyframe?)Next(typeof(BezierKeyframe), obj.GetComponent<KeyframedObject>(), snap);
 
         if (prev != null || next != null) {
             var dprev = (prev == null) ? (Vector3?)null : Vector3.Reflect(prev.PostHandle - prev.Handle, Vector3.Normalize(prev.Handle - position));
@@ -158,8 +153,19 @@ class BezierKeyframe : KeyframedObject.Keyframe
                 computed = -computed;
             }
 
-            PreHandle = Vector3.back * (dprevWeight ?? 1);
-            PostHandle = Vector3.forward * (dnextWeight ?? 1);
+            var weight = 1f;
+            var weightDiv = 0;
+            if (dprevWeight != null) {
+                weight += (float)dprevWeight;
+                weightDiv += 1;
+            }
+            if (dnextWeight != null) {
+                weight += (float)dnextWeight;
+                weightDiv += 1;
+            }
+            weight /= weightDiv;
+            PreHandle = Vector3.back * weight;
+            PostHandle = Vector3.forward * weight;
             Handle = position;
             handle.rotation = Quaternion.LookRotation(computed, Vector3.up);
         } else {
@@ -169,15 +175,29 @@ class BezierKeyframe : KeyframedObject.Keyframe
         }
 
     }    
+    public override void Remove() {
+        if (renderer != null) {
+            UnityEngine.Object.DestroyObject(renderer);
+            Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
+        }
+    }
 
     public override void Move(GameObject obj, float time)
     {
+        /// keep the renderer alive while moving
+        var renderer = this.renderer;
+        this.renderer = null;
         var keys = obj.GetComponent<KeyframedObject>();
         keys.Remove(this);
-        snap = new Snap(ReplayAPI.CurrentTime);
+        snap = new Snap(time);
         // todo: reorder children in the rendererer and change the name
         keys.Add(this);
+        this.renderer = renderer;
+        if (this.renderer != null) {
+            this.renderer.name = snap.Time().ToString();
+        }
     }
+
     protected static Vector3 Qerp(BezierKeyframe _0, BezierKeyframe _1, float t)
     {
         Vector3 a = Vector3.Lerp(_0.Handle, _0.PostHandle, t);
@@ -201,8 +221,87 @@ class BezierKeyframe : KeyframedObject.Keyframe
 
     public override KeyframedObject.Keyframe Capture(GameObject obj)
     {
-        return new BezierKeyframe(obj);
+
+        var snap = new Snap(ReplayAPI.CurrentTime);
+        var prev = (BezierKeyframe?)Previous(typeof(BezierKeyframe), obj.GetComponent<KeyframedObject>(), snap - 1);
+
+        var next = (BezierKeyframe?)Next(typeof(BezierKeyframe), obj.GetComponent<KeyframedObject>(), snap);
+
+        return new BezierKeyframe(obj, prev, next);
+        
     }
+}
+
+class TrackingBezierKeyframe : BezierKeyframe {
+    public BezierKeyframe Focus;
+    public Vector3 UpVector;
+
+    protected GameObject? FocusObject(GameObject obj) {
+        return obj.GetComponent<CameraRig>()?.FocusObject;
+    }
+
+    public TrackingBezierKeyframe() : base() {
+        Focus = new();
+    }
+
+    TrackingBezierKeyframe(GameObject obj) : 
+        base(obj, 
+            Previous<TrackingBezierKeyframe>(obj.GetComponent<KeyframedObject>(), new Snap(ReplayAPI.CurrentTime) - 1),
+            Next<TrackingBezierKeyframe>(obj.GetComponent<KeyframedObject>(), new Snap(ReplayAPI.CurrentTime), null)
+        )
+    {
+        UpVector = obj.GetComponent<CameraRig>()?.UpVector ?? Vector3.up;
+        var focusObject = FocusObject(obj);
+        if (focusObject != null) {
+            Focus = new BezierKeyframe(
+                focusObject,
+                Previous<TrackingBezierKeyframe>(obj.GetComponent<KeyframedObject>(), new Snap(ReplayAPI.CurrentTime) - 1)?.Focus,
+                Next<TrackingBezierKeyframe>(obj.GetComponent<KeyframedObject>(), new Snap(ReplayAPI.CurrentTime), null)?.Focus
+            );
+        } else {
+            Focus = new();
+        }
+    }
+
+    public override void Remove() {
+        base.Remove();
+        Focus.Remove();
+    }
+
+    public override void Move(GameObject obj, float time)
+    {
+        base.Move(obj, time);
+        Focus.Move(obj, time);
+    }
+
+    public override void Apply(GameObject obj, float time)
+    {
+        var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
+
+        float t = tValue(next, time);
+
+        obj.transform.position = Qerp(this, next, t);
+
+        var focusObject = FocusObject(obj);
+        if (focusObject != null) {
+            var focused = Qerp(Focus, next.Focus, t);
+            var upVector = Vector3.Lerp(UpVector, next.UpVector, t);
+            obj.transform.LookAt(focused, upVector);
+            focusObject.transform.position = focused;
+            // focusObject.transform.localPosition = Vector3(0, 0, focusObject.transform.localPosition.z);
+        }
+    }
+
+    public override KeyframedObject.Keyframe Capture(GameObject obj)
+    {
+        return new TrackingBezierKeyframe(obj);
+    }
+
+    // [Newtonsoft.Json.JsonConstructor]
+    // private TrackingBezierKeyframe(Transform preHandle, Transform handle, Transform postHandle) {
+
+
+    // }
 }
 
 // bad; unused
