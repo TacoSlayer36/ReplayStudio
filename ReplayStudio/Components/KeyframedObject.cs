@@ -101,11 +101,13 @@ public class KeyframedObject : MonoBehaviour
             snap = new Snap(0f);
         }
 
+        public virtual void Remove() {}
+
         public virtual void Move(GameObject obj, float time)
         {
             var keys = obj.GetComponent<KeyframedObject>();
             keys.Remove(this);
-            this.snap = new Snap(ReplayAPI.CurrentTime);
+            this.snap = new Snap(time);
             keys.Add(this);
         }
 
@@ -119,7 +121,18 @@ public class KeyframedObject : MonoBehaviour
         public abstract void Apply(GameObject obj, float time);
         
         /// <summary>
-        /// Safety: This must be of type T 
+        /// Safety: T must be the most derived type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="keys"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public static T? Previous<T>(KeyframedObject keys, Snap snap) where T : Keyframe {
+            return (T?)Previous(typeof(T), keys, snap);
+        }
+        
+        /// <summary>
+        /// Safety: T must be the most derived type
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="keys"></param>
@@ -379,6 +392,7 @@ public class KeyframedObject : MonoBehaviour
         var k = Channels[t].GetValueOrDefault(snap);
         if (k != null)
         {
+            Channels[t][snap]?.Remove();
             Channels[t].Remove(snap);
         }
     }
