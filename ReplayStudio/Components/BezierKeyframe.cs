@@ -153,7 +153,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
                 computed = -computed;
             }
 
-            var weight = 1f;
+            var weight = 0f;
             var weightDiv = 0;
             if (dprevWeight != null) {
                 weight += (float)dprevWeight;
@@ -163,7 +163,11 @@ class BezierKeyframe : KeyframedObject.Keyframe
                 weight += (float)dnextWeight;
                 weightDiv += 1;
             }
-            weight /= weightDiv;
+            if (weightDiv == 0) {
+                weight = 1;
+            } else {
+                weight /= weightDiv;
+            }
             PreHandle = Vector3.back * weight;
             PostHandle = Vector3.forward * weight;
             Handle = position;
