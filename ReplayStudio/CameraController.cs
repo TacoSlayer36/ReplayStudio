@@ -21,7 +21,7 @@ namespace ReplayStudio
         {
             if (DoMapping)
             {
-                CameraController.MapCamera();
+                CameraController.MapCameraToView();
             }
         }
 
@@ -64,9 +64,8 @@ namespace ReplayStudio
             if (Camera != null) GameObject.Destroy(Camera.gameObject);
         }
 
-        public static void EnterCamera(bool snapView)
+        public static void EnterCamera()
         {
-            ViewController.StoreViewCamTransform();
             DoMapping = true;
 
             Enabled = false;
@@ -76,10 +75,10 @@ namespace ReplayStudio
             AudioListener.enabled = true;
             Enabled = true;
 
-            ViewController.ViewCamTransform.position = Camera.transform.position;
-            ViewController.ViewCamTransform.rotation = Camera.transform.rotation;
+            ViewController.StoreViewCamTransform();
+            MapViewToCamera();
 
-            CameraModel?.SetActive(false);
+            //CameraModel?.SetActive(false);
         }
 
         public static void ExitCamera()
@@ -93,16 +92,25 @@ namespace ReplayStudio
             Camera.enabled = false;
             AudioListener.enabled = false;
 
-            CameraModel?.SetActive(true);
+            //CameraModel?.SetActive(true);
         }
 
-        public static void MapCamera()
+        public static void MapCameraToView()
         {
             if (Camera == null) return;
 
             CameraController.Camera.transform.position = ViewController.LegacyCamRef.transform.position;
-            CameraController.Camera.transform.rotation = ViewController.LegacyCamRef.transform.rotation;
+            CameraController.Camera.transform.rotation = Quaternion.Euler(ViewController.ViewRot.x, ViewController.ViewRot.y, 0f);
             CameraController.Camera.fieldOfView = ViewController.ViewFOV;
+        }
+
+        public static void MapViewToCamera()
+        {
+            ViewController.ViewCamTransform.position = Camera.transform.position;
+            ViewController.ViewCamTransform.rotation = Camera.transform.rotation;
+            ViewController.ViewRot = Camera.transform.rotation.eulerAngles;
+            ViewController.ViewFOV = Camera.fieldOfView;
+            ViewController.ViewSize = Camera.orthographicSize;
         }
 
         public static void MoveCameraToMapStart(int map)

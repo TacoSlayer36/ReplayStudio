@@ -55,6 +55,8 @@ public static class ViewController
 	public static Vector2 storedViewRot;
 	public static Vector3 storedOrbitCamFocus;
 	public static float storedOrbitCamDist;
+	public static float storedFOV;
+	public static float storedSize;
 
 	static bool isViewUnlocked = false;
 
@@ -275,6 +277,8 @@ public static class ViewController
 		ViewRot = storedViewRot;
         OrbitCamFocus = storedOrbitCamFocus;
 		OrbitCamDist = storedOrbitCamDist;
+		ViewFOV = storedFOV;
+		ViewSize = storedSize;
 	}
 
     public static void StoreViewCamTransform()
@@ -283,6 +287,8 @@ public static class ViewController
         storedViewRot = ViewRot;
         storedOrbitCamFocus = OrbitCamFocus;
         storedOrbitCamDist = OrbitCamDist;
+		storedFOV = ViewFOV;
+		storedSize = ViewSize;
     }
 
     public static void SetCameraMode(ViewMode mode)

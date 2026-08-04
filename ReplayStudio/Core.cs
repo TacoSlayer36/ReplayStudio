@@ -136,22 +136,19 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.Keypad0))
             {
-                if (HelperFunctions.IsPressingAny(HelperFunctions.AltKeys))
-                {
-                    CameraController.MapCamera();
-                    CameraController.EnterCamera(true);
-                }
-                else
-                {
                     if (CameraController.Enabled)
                     {
                         CameraController.ExitCamera();
                     }
                     else
                     {
-                        CameraController.EnterCamera(true);
+                    CameraController.EnterCamera();
                     }
                 }
+
+            if (Input.GetKeyDown(KeyCode.KeypadPeriod))
+            {
+                CameraController.MapCameraToView();
             }
         }
     }
