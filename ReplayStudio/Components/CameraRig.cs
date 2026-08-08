@@ -20,13 +20,17 @@ public class CameraRig : MonoBehaviour
 
     public void AddFocusObject() {
         FocusObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        FocusObject.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        FocusObject.GetComponent<Renderer>().material.SetInteger("Render Face", 2);
+
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        mat.color = Color.yellow;
+        FocusObject.name = "Focus";
+        FocusObject.GetComponent<Renderer>().material = mat;
+
         FocusObject.AddComponent<KeyframedObject>();
         FocusObject.transform.SetParent(transform);
         FocusObject.transform.localPosition = new Vector3(0, 0, 5);
         // FocusObject.transform.SetParent(transform.parent);
-        FocusObject.transform.localScale = Vector3.one * -0.5f;
+        FocusObject.transform.localScale *= 0.3f;
         FocusObject.GetComponent<Collider>().excludeLayers = ~0;
         FocusObject.GetComponent<Collider>().includeLayers = 0;
         FocusObject.SetActive(Core.Settings.RenderBezierWidgets.Value);

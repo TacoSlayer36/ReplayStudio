@@ -1,3 +1,4 @@
+using System;
 using ReplayMod.Replay;
 using UnityEngine;
 
@@ -21,27 +22,50 @@ class BezierKeyframe : KeyframedObject.Keyframe
             return found;
         }
     }
-    static GameObject KeyframesForObj(GameObject obj)  {
-        var found = KeyframesRoot.transform.FindChild(obj.name + obj.GetEntityId())?.gameObject;
+
+    static String NameForObj(GameObject obj) {
+        return obj.name + obj.GetEntityId();
+    }
+
+    static GameObject KeyframesForObj(String obj)
+    {
+        var found = KeyframesRoot.transform.FindChild(obj)?.gameObject;
             
         if (found == null) {
-            found = new GameObject(obj.name + obj.GetEntityId());
+            found = new GameObject(obj);
             found.transform.SetParent(KeyframesRoot.transform);
         }
         return found;
-    } 
+    }
 
-    protected readonly Transform handle;
-    protected readonly Transform preHandle;
-    protected readonly Transform postHandle;
+    internal static GameObject ParentForKeyframe(Snap snap, String obj)
+    {
+        var found = KeyframesForObj(obj).transform.FindChild(snap.Time().ToString())?.gameObject;
 
-    protected GameObject? renderer;
+        if (found == null)
+        {
+            found = new GameObject(snap.Time().ToString());
+            found.transform.SetParent(KeyframesForObj(obj).transform);
+        }
+        return found;
+    }
+
+    internal Transform handle;
+    internal Transform preHandle;
+    internal Transform postHandle;
+    internal GameObject? renderer;
+    internal LineRenderer? preLine;
+    internal LineRenderer? postLine;
+    internal LineRenderer? spline;
+    [Newtonsoft.Json.JsonIgnore]
+    public Vector3[] PointsAlong;
+
+    public String Obj;
 
     public Vector3 Handle { get => handle.position; set => handle.position = value; }
-
     public Vector3 PreHandle { get => preHandle.position; set => preHandle.position = value; }
-
     public Vector3 PostHandle { get => postHandle.position; set => postHandle.position = value; }
+
 
     // todo: locked and unlocked beziers
     // public enum ESubtype {
@@ -57,71 +81,166 @@ class BezierKeyframe : KeyframedObject.Keyframe
         handle = new();
         preHandle = new();
         postHandle = new();
+        Obj = "empty";
+        PointsAlong = Array.Empty<Vector3>();
     }
 
     void UpdateRenderer(bool _oldvalue, bool enabled) {
         renderer?.SetActive(enabled);
+        preLine?.gameObject.SetActive(enabled);
+        postLine?.gameObject.SetActive(enabled);
+        spline?.gameObject.SetActive(enabled);
     }
+
+    public void RenderInternal(BezierKeyframe? next)
+    {
+        if (handle != null)
+        {
+            if (preHandle != null && preLine != null) // TODO: Get Sy to fix the error that happens without these checks >:3
+                preLine.SetPositions(new Vector3[] { PreHandle, Handle });
+            if (postHandle != null && postLine != null)
+                postLine.SetPositions(new Vector3[] { PostHandle, Handle });
+        }
+
+        if (next != null)
+        {            
+            PointsAlong = new Vector3[Core.Settings.SplineResolution.EditedValue];
+            for (int i = 0; i < PointsAlong.Length; i++)
+            {
+                float t = i / (float)PointsAlong.Length;
+                PointsAlong[i] = Qerp(this, next, t);
+            }
+            spline?.gameObject.SetActive(Core.Settings.RenderBezierWidgets.Value);
+        }
+        else
+        {
+            PointsAlong = Array.Empty<Vector3>();
+            spline?.gameObject.SetActive(false);
+        }
+
+        if (spline != null) {
+            spline.positionCount = PointsAlong.Length;
+            spline.SetPositions(PointsAlong);
+        }
+    }
+
+    public override void Render(KeyframedObject keys)
+    {
+        BezierKeyframe? next = (BezierKeyframe?)Next(typeof(BezierKeyframe), keys, snap);
+        RenderInternal(next);
+    }
+
+    // internal void LateInitializeRenderer(GameObject parent) {
+    //     var handle = this.handle.position;
+    //     var preHandle = this.preHandle.position;
+    //     var postHandle = this.postHandle.position;
+    //     InitializeRenderer(parent);
+    //     this.handle.position = handle; 
+    //     this.preHandle.position = preHandle; 
+    //     this.postHandle.position = postHandle; 
+    // }
 
     /// <summary>
     /// Renderer constructor
     /// </summary>
-    private BezierKeyframe(GameObject obj, Snap snap)
+    private BezierKeyframe(String obj, Snap snap)
     {
         this.snap = snap;
+        this.Obj = obj;
+        PointsAlong = Array.Empty<Vector3>();
+
+        var parent = ParentForKeyframe(snap, obj);
 
         var r = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         {
-            r.name = snap.Time().ToString();
-            r.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            r.transform.SetParent(KeyframesForObj(obj).transform);
-            r.transform.localScale *= 0.5f;
+            r.name = "keyframe";
+            r.transform.SetParent(parent.transform);
+            r.transform.localScale *= 0.1f;
             r.GetComponent<Collider>().excludeLayers = ~0;
             r.GetComponent<Collider>().includeLayers = 0;
-            // GameObject.Destroy(r.GetComponent<Collider>());
             r.SetActive(Core.Settings.RenderBezierWidgets.Value);
+
+            Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
+            {
+                color = Color.blue
+            };
+            r.GetComponent<Renderer>().material = mat;
+
             renderer = r;
 
+            // renderer.transform.position = handle?.position ?? new();
+            // renderer.transform.rotation = handle?.rotation ?? Quaternion.identity;
             handle = renderer.transform;
 
             Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
         }
 
         {
-            var pre = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var pre = GameObject.CreatePrimitive(PrimitiveType.Cube);
             pre.name = "pre";
-            pre.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            pre.transform.SetParent(renderer.transform);
-            pre.transform.localScale *= 0.2f;
-            r.GetComponent<Collider>().excludeLayers = ~0;
-            r.GetComponent<Collider>().includeLayers = 0;
-            // pre.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-            // GameObject.Destroy(pre.GetComponent<Collider>());
-            // pre.SetActive(true);
+            pre.transform.SetParent(r.transform);
+            pre.transform.localScale *= 0.1f;
+            pre.GetComponent<Collider>().excludeLayers = ~0;
+            pre.GetComponent<Collider>().includeLayers = 0;
+            pre.SetActive(Core.Settings.RenderBezierWidgets.Value);
 
+            Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
+            {
+                color = Color.blue
+            };
+            pre.GetComponent<Renderer>().material = mat;
+
+            // pre.transform.position = preHandle?.position ?? new();
+            // pre.transform.rotation = preHandle?.rotation ?? Quaternion.identity;
             preHandle = pre.transform;
+
+            var pl = new GameObject("line");
+            pl.transform.SetParent(pre.transform);
+            preLine = pl.AddComponent<LineRenderer>();
+            preLine.material = mat;
+            preLine.widthMultiplier = 0.01f;
         }
 
         {
-            var post = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var post = GameObject.CreatePrimitive(PrimitiveType.Cube);
             post.name = "post";
-            post.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             post.transform.SetParent(r.transform);
-            post.transform.localScale *= 0.2f;
-            r.GetComponent<Collider>().excludeLayers = ~0;
-            r.GetComponent<Collider>().includeLayers = 0;
-            // post.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-            // GameObject.Destroy(post.GetComponent<Collider>());
-            // post.SetActive(true);
+            post.transform.localScale *= 0.1f;
+            post.GetComponent<Collider>().excludeLayers = ~0;
+            post.GetComponent<Collider>().includeLayers = 0;
+            post.SetActive(Core.Settings.RenderBezierWidgets.Value);
 
+            Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
+            {
+                color = Color.blue
+            };
+            post.GetComponent<Renderer>().material = mat;
+
+            // post.transform.position = postHandle?.position ?? new();
+            // post.transform.rotation = postHandle?.rotation ?? Quaternion.identity;
             postHandle = post.transform;
+
+            var pl = new GameObject("line");
+            pl.transform.SetParent(post.transform);
+            postLine = pl.AddComponent<LineRenderer>();
+            postLine.material = mat;
+            postLine.widthMultiplier = 0.01f;
+        }
+
+        {
+            var spl = new GameObject("spline");
+            spl.transform.SetParent(parent.transform);
+            spline = spl.AddComponent<LineRenderer>();
+            spline.material = Core.DottedLineMat;
+            spline.widthMultiplier = 0.01f;
+            spline.gameObject.SetActive(Core.Settings.RenderBezierWidgets.Value);
         }
     }
 
     /// <summary>
     /// Capturing constructor
     /// </summary>
-    public BezierKeyframe(GameObject obj, BezierKeyframe? prev, BezierKeyframe? next) : this(obj, new Snap(ReplayAPI.CurrentTime)) {
+    public BezierKeyframe(GameObject obj, BezierKeyframe? prev, BezierKeyframe? next) : this(NameForObj(obj), new Snap(ReplayAPI.CurrentTime)) {
         var position = obj.transform.position;
 
         if (prev != null || next != null) {
@@ -232,7 +351,14 @@ class BezierKeyframe : KeyframedObject.Keyframe
         var next = (BezierKeyframe?)Next(typeof(BezierKeyframe), obj.GetComponent<KeyframedObject>(), snap);
 
         return new BezierKeyframe(obj, prev, next);
-        
+    }
+
+    [Newtonsoft.Json.JsonConstructor]
+    public BezierKeyframe(String obj, Snap snap, Vector3 PreHandle, Vector3 Handle, Vector3 PostHandle) : this(obj, snap)
+    {
+        this.Handle = Handle;
+        this.PreHandle = PreHandle;
+        this.PostHandle = PostHandle;
     }
 }
 
@@ -240,7 +366,7 @@ class TrackingBezierKeyframe : BezierKeyframe {
     public BezierKeyframe Focus;
     public Vector3 UpVector;
 
-    protected GameObject? FocusObject(GameObject obj) {
+    protected static GameObject? FocusObject(GameObject obj) {
         return obj.GetComponent<CameraRig>()?.FocusObject;
     }
 
@@ -272,6 +398,13 @@ class TrackingBezierKeyframe : BezierKeyframe {
         Focus.Remove();
     }
 
+    public override void Render(KeyframedObject keys)
+    {
+        TrackingBezierKeyframe? next = (TrackingBezierKeyframe?)Next(typeof(TrackingBezierKeyframe), keys, snap);
+        RenderInternal(next);
+        Focus.RenderInternal(next?.Focus);
+    }
+
     public override void Move(GameObject obj, float time)
     {
         base.Move(obj, time);
@@ -301,11 +434,11 @@ class TrackingBezierKeyframe : BezierKeyframe {
         return new TrackingBezierKeyframe(obj);
     }
 
-    // [Newtonsoft.Json.JsonConstructor]
-    // private TrackingBezierKeyframe(Transform preHandle, Transform handle, Transform postHandle) {
-
-
-    // }
+    [Newtonsoft.Json.JsonConstructor]
+    public TrackingBezierKeyframe(String obj, Snap snap, Vector3 PreHandle, Vector3 Handle, Vector3 PostHandle, BezierKeyframe Focus) : base(obj, snap, PreHandle, Handle, PostHandle)
+    {
+        this.Focus = Focus;
+    }
 }
 
 // bad; unused

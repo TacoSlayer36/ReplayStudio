@@ -102,6 +102,7 @@ public class KeyframedObject : MonoBehaviour
         }
 
         public virtual void Remove() {}
+        public virtual void Render(KeyframedObject keys) {}
 
         public virtual void Move(GameObject obj, float time)
         {
@@ -345,7 +346,9 @@ public class KeyframedObject : MonoBehaviour
         Register<K>();
         var keyframe = constructors[typeof(K)].Capture(gameObject);
         Add(keyframe);
-        return new TimelineController.KeyframeMarker(gameObject, keyframe);
+        var newKeyframeMarker = new TimelineController.KeyframeMarker(gameObject, keyframe);
+        TimelineController.OnKeyframesModified(newKeyframeMarker);
+        return newKeyframeMarker;
     }
 
     public void Capture<K1, K2>()
@@ -365,13 +368,14 @@ public class KeyframedObject : MonoBehaviour
         Capture<K3>();        
     }
 
-    public void InitializeAllMarkers()
+    public void InitializeAll()
     {
         foreach (var (type, sortedList) in Channels)
         {
             foreach (var (snap, keyframe) in sortedList)
             {
                 new TimelineController.KeyframeMarker(CameraController.Camera.gameObject, keyframe);
+                keyframe.Render(this);
             }
         }
     }

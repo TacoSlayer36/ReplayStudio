@@ -355,6 +355,30 @@ public partial class TimelineController : MonoBehaviour
 		}
 	}
 
+	public static void OnKeyframesModified(params KeyframeMarker[] modifiedKeyframes)
+	{
+		Instance.UpdateKeyframeWidgets(modifiedKeyframes.ToList());
+	}
+
+	public void UpdateKeyframeWidgets(List<KeyframeMarker> keysToRender = null)
+	{
+		if (keysToRender == null) keysToRender = new();
+
+		if (keysToRender.Count == 0)
+		{
+			foreach (var (_, keyframes) in keyframes)
+			{
+				foreach (KeyframeMarker keyframe in keyframes)
+				{
+					keysToRender.Add(keyframe);
+				}
+			}
+		}
+
+		foreach (KeyframeMarker keyframe in keysToRender)
+			keyframe.Render();
+	}
+
 	public void DeletePrevKeyframeMarker() {
 		var snap = new KeyframedObject.Keyframe.Snap(ReplayAPI.CurrentTime);
 		var toDelete = new List<KeyframeMarker>(keyframes.LastOrDefault((t) => t.Key <= snap && t.Value.Count != 0).Value);

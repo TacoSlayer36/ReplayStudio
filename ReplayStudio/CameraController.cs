@@ -78,7 +78,7 @@ namespace ReplayStudio
             ViewController.StoreViewCamTransform();
             MapViewToCamera();
 
-            //CameraModel?.SetActive(false);
+            CameraModel?.SetActive(false);
         }
 
         public static void ExitCamera()
@@ -92,7 +92,7 @@ namespace ReplayStudio
             Camera.enabled = false;
             AudioListener.enabled = false;
 
-            //CameraModel?.SetActive(true);
+            CameraModel?.SetActive(true);
         }
 
         public static void MapCameraToView()

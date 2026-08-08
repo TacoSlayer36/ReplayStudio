@@ -39,20 +39,22 @@ public class Core : MelonMod
     public static float FPS = 30f;
 
     public static GameObject DDOL_GameObjects;
-    public static GameObject LineTemplate;
+    public static Material DottedLineMat;
 
-
-    public struct Settings {
+    public struct Settings
+    {
         internal const string USER_DATA = "UserData/ReplayStudio/Settings/";
         internal const string CONFIG_FILE = "config.cfg";
 
         public static MelonPreferences_Entry<bool> RenderBezierWidgets;
+        public static MelonPreferences_Entry<int> SplineResolution;
     }
 
     public static JsonSerializerSettings settings = new JsonSerializerSettings()
     {
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-        TypeNameHandling = TypeNameHandling.Auto
+        TypeNameHandling = TypeNameHandling.Auto,
+        Converters = { new Vector3Converter() }
     };
 
     internal static PlayerController LocalPlayerRef => PlayerManager.Instance.localPlayer.Controller;
@@ -63,11 +65,12 @@ public class Core : MelonMod
             Directory.CreateDirectory(Settings.USER_DATA);
 
         string configPath = Path.Combine(Settings.USER_DATA, Settings.CONFIG_FILE);
-        var tmpFolder = MelonPreferences.CreateCategory("tmp");
-        tmpFolder.SetFilePath(configPath);
-        Settings.RenderBezierWidgets = tmpFolder.CreateEntry("Render_Bezier_Widgets", true, "Render Bezier Widgets", "Render the handle widgets for Bezier keyframes");
+        var tmpCategory = MelonPreferences.CreateCategory("tmp");
+        tmpCategory.SetFilePath(configPath);
+        Settings.RenderBezierWidgets = tmpCategory.CreateEntry("ReplayStudio-RenderBezierWidgets", true, "Render Bezier Widgets", "Render the handle widgets for Bezier keyframes");
+        Settings.SplineResolution = tmpCategory.CreateEntry("ReplayStudio-SplineResolution", 10, "Spline Resolution", "The amount of steps used to render each spline");
 
-        UI.RegisterMelon(this, tmpFolder);
+        UI.RegisterMelon(this, tmpCategory);
     }
 
 
@@ -125,6 +128,7 @@ public class Core : MelonMod
 
             if (Input.GetKeyDown(KeyCode.Delete)) {
                 TimelineController.Instance.DeletePrevKeyframeMarker();
+                SaveStudioData();
             }
 
 
@@ -134,7 +138,7 @@ public class Core : MelonMod
                 SaveStudioData();
             }
 
-            if (Input.GetKeyDown(KeyCode.Keypad0))
+            if (Input.GetKeyDown(KeyCode.Insert) || Input.GetKeyDown(KeyCode.Keypad0))
             {
                     if (CameraController.Enabled)
                     {
@@ -149,6 +153,11 @@ public class Core : MelonMod
             if (Input.GetKeyDown(KeyCode.KeypadPeriod))
             {
                 CameraController.MapCameraToView();
+            }
+
+            if (Input.GetKeyDown(KeyCode.R)) // TODO: This is temporary
+            {
+                TimelineController.OnKeyframesModified();
             }
         }
     }
@@ -195,6 +204,9 @@ public class Core : MelonMod
         DDOL_GameObjects = GameObject.Instantiate(GameObjectManager.LoadAssetFromStream<GameObject>(this, "ReplayStudio.assets.replaystudio", "ReplayStudio"));
         GameObject.DontDestroyOnLoad(DDOL_GameObjects);
 
+        DottedLineMat = new Material(GameObjectManager.LoadAssetFromStream<Material>(this, "ReplayStudio.assets.replaystudio", "DottedLine"));
+        DottedLineMat.hideFlags = HideFlags.HideAndDontSave | HideFlags.DontUnloadUnusedAsset;
+
         Transform uiRoot = DDOL_GameObjects.transform.Find("Canvas");
         UIManager.SetUpUI(uiRoot);
 
@@ -225,6 +237,7 @@ public class Core : MelonMod
 
     internal void LoadStudioData()
     {
+        MelonLogger.Msg("LoadStudioData");
         if (File.Exists(CurrentReplayPath))
         {
             string fileContent = string.Empty;
@@ -238,24 +251,34 @@ public class Core : MelonMod
                     {
                         fileContent = reader.ReadToEnd();
                     }
+                } else {
+                    MelonLogger.Msg($"LoadStudioData::({saveFileName}) no such file");
                 }
             }
             if (!string.IsNullOrEmpty(fileContent))
             {
+                MelonLogger.Msg("Deserializing");
+                MelonLogger.Msg(fileContent);
                 StudioData = JsonConvert.DeserializeObject<StudioData>(fileContent, settings);
+            } else {
+                MelonLogger.Msg($"LoadStudioData::file content is null");
             }
         }
         else
         {
+            MelonLogger.Msg($"LoadStudioData::({CurrentReplayPath}) no such file");
             StudioData = new();
         }
 
-        CameraController.KeyframeComponent.InitializeAllMarkers();
+        MelonLogger.Msg("LoadStudioData;");
+        CameraController.KeyframeComponent.InitializeAll();
     }
 
     internal void SaveStudioData()
     {
         string serializedJson = JsonConvert.SerializeObject(StudioData, Formatting.Indented, settings);
+        MelonLogger.Msg("serializing");
+        MelonLogger.Msg(serializedJson);
 
         using (FileStream archiveToOpen = new FileStream(CurrentReplayPath, FileMode.OpenOrCreate))
         using (ZipArchive archive = new(archiveToOpen, ZipArchiveMode.Update))

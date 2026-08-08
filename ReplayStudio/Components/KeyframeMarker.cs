@@ -14,7 +14,7 @@ namespace ReplayStudio.Components;
 public partial class TimelineController : MonoBehaviour {
 
     /// <summary>
-    /// This class manages all storage of keyframe related data. It is the begining and the end of a keyframe
+    /// This class manages all storage of keyframe related data. It is the beginning and the end of a keyframe
     /// </summary>
     public class KeyframeMarker
     {
@@ -64,6 +64,11 @@ public partial class TimelineController : MonoBehaviour {
         protected void RemoveRenderer()
         {
             GameObject.Destroy(markerIcon);
+        }
+
+        public void Render()
+        {
+            keyframe.Render(target.GetComponent<KeyframedObject>());
         }
 
         public void Remove()
