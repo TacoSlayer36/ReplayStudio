@@ -12,14 +12,9 @@ namespace ReplayStudio
         public static List<KeyCode> ControlKeys = new List<KeyCode> { KeyCode.LeftControl, KeyCode.RightControl };
         public static List<KeyCode> ShiftKeys = new List<KeyCode> { KeyCode.LeftShift, KeyCode.RightShift };
         public static List<KeyCode> AltKeys = new List<KeyCode> { KeyCode.LeftAlt, KeyCode.RightAlt };
-        public static bool IsPressingAny(List<KeyCode> keyList)
+        public static bool IsPressingAny(List<KeyCode> keyList, bool ignoreUIBlocking = false)
         {
-            //if (ignoreModified)
-            //{
-            //    if (IsPressingAny(ControlKeys, false)) return false;
-            //    if (IsPressingAny(ShiftKeys, false)) return false;
-            //    if (IsPressingAny(AltKeys, false)) return false;
-            //}
+            if (!ignoreUIBlocking && UIManager.IsInputBlocked) return false;
 
             foreach (KeyCode keyCode in keyList)
             {

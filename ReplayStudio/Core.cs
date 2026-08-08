@@ -14,6 +14,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UIFramework;
+using static ReplayStudio.StudioData;
 
 /* TODO:
  * Crystals
@@ -119,7 +120,7 @@ public class Core : MelonMod
         if (!UIManager.IsHoveringAny)
             CameraController.HandleCamera();
 
-        if (ReplayAPI.IsPlaying)
+        if (ReplayAPI.IsPlaying && !UIManager.IsInputBlocked)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {

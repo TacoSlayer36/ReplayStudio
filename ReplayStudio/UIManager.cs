@@ -1,3 +1,4 @@
+using Il2CppPhoton.Compression;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Utilities;
 using Il2CppTMPro;
@@ -13,6 +14,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Playables;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -24,6 +27,7 @@ internal static class UIManager
     public static Dictionary<string, Transform> TransformRefs = new();
 
     public static List<MouseDetector> MouseDetectors = new();
+    public static List<TMP_InputField> InputFields = new();
 
     public static MouseDetector PopoutHoverMD;
     public enum WindowMode
@@ -46,6 +50,19 @@ internal static class UIManager
     }
 
     public static bool IsHoveringAny => MouseDetectors.Any(m => m.IsHovering || m.HeldFromHovering);
+    public static bool IsTypingAny => (InputFields?.Any(m => m.isFocused) ?? false);
+
+    private static GameObject _ueCanvas;
+    public static GameObject UECanvas
+    {
+        get
+        {
+            if (_ueCanvas == null) _ueCanvas = GameObject.Find("UniverseLibCanvas/com.sinai.unityexplorer_Root");
+            return _ueCanvas;
+        }
+    }
+    public static bool IsUEOpen => UECanvas?.active ?? false;
+    public static bool IsInputBlocked => IsTypingAny || IsUEOpen; // TODO: Maybe also include IsHoveringAny
 
     public static bool ViewingOtherPOV => ReplayPlayback.povPlayer != null && ReplayPlayback.povPlayer != PlayerManager.Instance?.LocalPlayer;
 
@@ -58,6 +75,11 @@ internal static class UIManager
 
         MouseDetectors.Clear();
         MouseDetectors.AddRange(uiRoot.GetComponentsInChildren<MouseDetector>());
+
+        InputFields.Clear();
+
+        List<TMP_InputField> studioFields = uiRoot?.GetComponentsInChildren<TMP_InputField>()?.ToList();
+        if (studioFields != null) InputFields.AddRange(studioFields);
 
         PopoutHoverMD = TransformRefs["PopoutHover"]?.GetComponent<MouseDetector>();
         TransformRefs["Editor"].gameObject.SetActive(false);

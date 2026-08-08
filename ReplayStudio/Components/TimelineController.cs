@@ -121,7 +121,7 @@ public partial class TimelineController : MonoBehaviour
 
 	void Update()
 	{
-		if (hovering)
+		if (hovering && !UIManager.IsInputBlocked)
 		{
 			float newFocus = viewportMouseDetector.GetNormalizedHoverPos().x;
 			float offset = (newFocus - FocusPos) * maxVisibleSegments / TargetZoom;
