@@ -15,6 +15,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UIFramework;
 using static ReplayStudio.StudioData;
+using static Il2CppRUMBLE.Players.Subsystems.PlayerAnimator;
 
 /* TODO:
  * Crystals
@@ -24,6 +25,8 @@ namespace ReplayStudio;
 
 public class Core : MelonMod
 {
+    public static HeadAnimation AA_Expression = HeadAnimation.Idle;
+
     public static Core Instance;
     public static ReplayMod.Core.Main ReplayModMain;
     public static string CurrentReplayPath; // Set via a harmony patch :(
@@ -55,6 +58,7 @@ public class Core : MelonMod
     {
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
         TypeNameHandling = TypeNameHandling.Auto,
+        ObjectCreationHandling = ObjectCreationHandling.Replace,
         Converters = { new Vector3Converter() }
     };
 
@@ -211,8 +215,6 @@ public class Core : MelonMod
         Transform uiRoot = DDOL_GameObjects.transform.Find("Canvas");
         UIManager.SetUpUI(uiRoot);
 
-        LineTemplate = DDOL_GameObjects.transform.Find("LineTemplate").gameObject;
-
         ViewController.InitializeCamera();
     }
 
@@ -223,6 +225,12 @@ public class Core : MelonMod
         if (!ViewController.IsViewCamEnabled && !AssumedInVR) ViewController.SetCameraMode(ViewController.ViewMode.Fly);
 
         CameraController.InitializeCamera();
+
+        foreach (var player in ReplayMod.Core.Main.Playback.PlaybackPlayers)
+        {
+            if (player.Controller.gameObject.GetComponent<KeyframedObject>() == null)
+                player.Controller.gameObject.AddComponent<KeyframedObject>();
+        }
 
         LoadStudioData();
     }
@@ -272,7 +280,12 @@ public class Core : MelonMod
         }
 
         MelonLogger.Msg("LoadStudioData;");
+
         CameraController.KeyframeComponent.InitializeAll();
+        foreach (KeyframedObject playerKeyframe in StudioData.playerComponents.Values)
+        {
+            playerKeyframe?.InitializeAll();
+        }
     }
 
     internal void SaveStudioData()

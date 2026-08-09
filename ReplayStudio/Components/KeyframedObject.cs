@@ -1,3 +1,4 @@
+using Il2CppRUMBLE.Players.Subsystems;
 using MelonLoader;
 using Newtonsoft.Json;
 using ReplayMod.Replay;
@@ -7,6 +8,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using UnityEngine;
+using static Il2CppRUMBLE.Players.Subsystems.PlayerAnimator;
 
 namespace ReplayStudio.Components;
 
@@ -270,6 +272,32 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
+    public class ExpressionKeyFrame : Keyframe
+    {
+        [JsonProperty]
+        int data;
+
+        public override Keyframe Capture(GameObject obj)
+        {
+            return new ExpressionKeyFrame
+            {
+                snap = new Snap(ReplayAPI.CurrentTime),
+                data = (int)Core.AA_Expression // TODO
+            };
+        }
+
+        public override void Apply(GameObject obj, float time)
+        {
+            PlayerAnimator anim = obj.GetComponentInChildren<PlayerAnimator>();
+            anim?.PlayHeadAnimation((HeadAnimation)data, float.MaxValue);
+        }
+
+        public override void Remove()
+        {
+            
+        }
+    }
+
     [JsonProperty]
     public Dictionary<Type, SortedList<Keyframe.Snap, Keyframe>> Channels = new();
 
@@ -364,8 +392,8 @@ public class KeyframedObject : MonoBehaviour
         where K3 : Keyframe, new()
     {
         Capture<K1>();
-        Capture<K2>();        
-        Capture<K3>();        
+        Capture<K2>();
+        Capture<K3>();
     }
 
     public void InitializeAll()
@@ -374,7 +402,7 @@ public class KeyframedObject : MonoBehaviour
         {
             foreach (var (snap, keyframe) in sortedList)
             {
-                new TimelineController.KeyframeMarker(CameraController.Camera.gameObject, keyframe);
+                new TimelineController.KeyframeMarker(gameObject, keyframe);
                 keyframe.Render(this);
             }
         }
