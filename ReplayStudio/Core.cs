@@ -50,6 +50,14 @@ public class Core : MelonMod
         internal const string USER_DATA = "UserData/ReplayStudio/Settings/";
         internal const string CONFIG_FILE = "config.cfg";
 
+        public enum EKeyframeType
+        {
+            TrackingKeyframe,
+            TrackingBezierKeyframe,
+            LocRotKeyframe,
+        }
+
+        public static MelonPreferences_Entry<EKeyframeType> KeyframeType;
         public static MelonPreferences_Entry<bool> RenderKeyframeWidgets;
         public static MelonPreferences_Entry<int> SplineResolution;
     }
@@ -74,6 +82,7 @@ public class Core : MelonMod
         tmpCategory.SetFilePath(configPath);
         Settings.RenderKeyframeWidgets = tmpCategory.CreateEntry("ReplayStudio-RenderKeyframeWidgets", true, "Render Keyframe Widgets", "Render the handle widgets for keyframes");
         Settings.SplineResolution = tmpCategory.CreateEntry("ReplayStudio-SplineResolution", 10, "Spline Resolution", "The amount of steps used to render each spline");
+        Settings.KeyframeType = tmpCategory.CreateEntry("ReplayStudio-KeyframeType", Settings.EKeyframeType.TrackingKeyframe, "Type of keyframe", "Type of keyframe to insert with E");
 
         UI.RegisterMelon(this, tmpCategory);
     }
@@ -142,7 +151,18 @@ public class Core : MelonMod
 
                 if (Input.GetKeyDown(KeyCode.I))
                 {
-                    CameraController.KeyframeComponent.Capture<TrackingBezierKeyframe, KeyframedObject.FovKeyFrame>();
+                    switch (Settings.KeyframeType.Value)
+                    {
+                    case Settings.EKeyframeType.TrackingBezierKeyframe :
+                        CameraController.KeyframeComponent.Capture<TrackingBezierKeyframe, KeyframedObject.FovKeyFrame>();
+                        break;
+                    case Settings.EKeyframeType.TrackingKeyframe :
+                        CameraController.KeyframeComponent.Capture<KeyframedObject.TrackingKeyframe, KeyframedObject.FovKeyFrame>();
+                        break;
+                    case Settings.EKeyframeType.LocRotKeyframe :
+                        CameraController.KeyframeComponent.Capture<KeyframedObject.PositionKeyFrame, KeyframedObject.RotationKeyFrame, KeyframedObject.FovKeyFrame>();
+                        break;
+                    }
                     SaveStudioData();
                 }
             }
