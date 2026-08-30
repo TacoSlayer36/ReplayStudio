@@ -360,32 +360,31 @@ public partial class TimelineController : MonoBehaviour
 		Instance.UpdateKeyframeWidgets(modifiedKeyframes.ToList());
 	}
 
-	public void UpdateKeyframeWidgets(List<KeyframeMarker> keysToRender = null)
+
+	public void UpdateKeyframeWidgets(List<KeyframeMarker> modifiedKeyframes = null)
 	{
-		if (keysToRender == null) keysToRender = new();
+		Dictionary<GameObject, HashSet<Type>> keysToRender = new();
 
-		if (keysToRender.Count == 0)
-		{
+		foreach (var keyframe in modifiedKeyframes)
+			if (!keysToRender.ContainsKey(keyframe.Target))
+				keysToRender.GetValueOrDefault(keyframe.Target, new()).Add(keyframe.KeyframeType);
+
+		if (keysToRender == null || keysToRender.Count == 0)
 			foreach (var (_, keyframes) in keyframes)
-			{
 				foreach (KeyframeMarker keyframe in keyframes)
-				{
-					keysToRender.Add(keyframe);
-				}
-			}
-		}
-
-		foreach (KeyframeMarker keyframe in keysToRender)
-			keyframe.Render();
+					keyframe.Render();
+		else
+			foreach (var (obj, keyframes) in keysToRender)
+				foreach (var keyframe in keyframes)
+					obj.GetComponent<KeyframedObject>()?.Redraw(keyframe);
 	}
 
 	public void DeletePrevKeyframeMarker() {
 		var snap = new KeyframedObject.Keyframe.Snap(ReplayAPI.CurrentTime);
 		var toDelete = new List<KeyframeMarker>(keyframes.LastOrDefault((t) => t.Key <= snap && t.Value.Count != 0).Value);
 		
-		foreach (var keyframe in toDelete) {
+		foreach (var keyframe in toDelete)
 			keyframe.Remove();
-		}
 	}
 
 

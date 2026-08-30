@@ -313,6 +313,17 @@ public class KeyframedObject : MonoBehaviour
         ReplayAPI.onReplayTimeChanged -= Apply;
     }
 
+    public void Redraw(Type t)
+    {
+        if (!Channels.ContainsKey(t))
+            foreach (Keyframe keyframe in Channels[t].Values)
+                keyframe.Render(this);
+    }
+    public void Redraw<K>() where K : Keyframe
+    {
+        Redraw(typeof(K));
+    }
+
     void Apply(float time)
     {
         if (!enabled) return;
@@ -327,13 +338,9 @@ public class KeyframedObject : MonoBehaviour
     protected void EnsureErased(Type t)
     {
         if (t == typeof(Keyframe))
-        {
             throw new Exception("Lost Rich type K of Keyframe!");
-        }
         if (!Channels.ContainsKey(t))
-        {
             Channels[t] = new();
-        }
     }
     protected void Ensure<K>() where K : Keyframe
     {
@@ -374,7 +381,7 @@ public class KeyframedObject : MonoBehaviour
         Register<K>();
         var keyframe = constructors[typeof(K)].Capture(gameObject);
         Add(keyframe);
-        var newKeyframeMarker = new TimelineController.KeyframeMarker(gameObject, keyframe);
+        var newKeyframeMarker = new TimelineController.KeyframeMarker(gameObject, keyframe, typeof(K));
         TimelineController.OnKeyframesModified(newKeyframeMarker);
         return newKeyframeMarker;
     }
@@ -402,7 +409,7 @@ public class KeyframedObject : MonoBehaviour
         {
             foreach (var (snap, keyframe) in sortedList)
             {
-                new TimelineController.KeyframeMarker(gameObject, keyframe);
+                new TimelineController.KeyframeMarker(gameObject, keyframe, type);
                 keyframe.Render(this);
             }
         }

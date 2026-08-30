@@ -18,17 +18,20 @@ public partial class TimelineController : MonoBehaviour {
     /// </summary>
     public class KeyframeMarker
     {
-        private GameObject target;
+        public GameObject Target;
 
         private GameObject markerIcon;
         private RectTransform rectTransform;
 
         public KeyframedObject.Keyframe keyframe {get; }
 
-        public KeyframeMarker(GameObject gameObject, KeyframedObject.Keyframe keyframe)
+        public Type KeyframeType;
+
+        public KeyframeMarker(GameObject gameObject, KeyframedObject.Keyframe keyframe, Type keyframeType)
         {
-            this.target = gameObject;
+            this.Target = gameObject;
             this.keyframe = keyframe;
+            this.KeyframeType = keyframeType;
             TimelineController.Instance.AddKeyframeMarker(this);
             InitializeRenderer();
         }
@@ -68,12 +71,12 @@ public partial class TimelineController : MonoBehaviour {
 
         public void Render()
         {
-            keyframe.Render(target.GetComponent<KeyframedObject>());
+            keyframe.Render(Target.GetComponent<KeyframedObject>());
         }
 
         public void Remove()
         {
-            target.GetComponent<KeyframedObject>().Remove(keyframe);
+            Target.GetComponent<KeyframedObject>().Remove(keyframe);
             TimelineController.Instance.RemoveKeyframeMarker(this);
             RemoveRenderer();
         }
@@ -81,7 +84,7 @@ public partial class TimelineController : MonoBehaviour {
         public void Move(float time)
         {
             TimelineController.Instance.RemoveKeyframeMarker(this);
-            this.keyframe.Move(this.target, time);
+            this.keyframe.Move(this.Target, time);
             UpdateLocation();
             TimelineController.Instance.AddKeyframeMarker(this);
         }
