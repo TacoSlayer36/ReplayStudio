@@ -226,6 +226,232 @@ public class KeyframedObject : MonoBehaviour
         }
     }
 
+
+    public class TrackingKeyframe : Keyframe
+    {
+        static GameObject KeyframesRoot {
+            get 
+            {
+                // var ReplayRoot = ReplayAPI.ReplayRoot;
+                var ReplayRoot = ReplayMod.Core.Main.Playback.ReplayRoot;
+                var found = ReplayRoot.transform.FindChild("Keyframes")?.gameObject;
+
+                if (found == null) {
+                    found = new GameObject("Keyframes");
+                    found.transform.SetParent(ReplayRoot.transform);
+                }
+                return found;
+            }
+        }
+        static GameObject KeyframesForObj(String obj)
+        {
+            var found = KeyframesRoot.transform.FindChild(obj)?.gameObject;
+                
+            if (found == null) {
+                found = new GameObject(obj);
+                found.transform.SetParent(KeyframesRoot.transform);
+            }
+            return found;
+        }
+
+        internal static GameObject ParentForKeyframe(Snap snap, String obj)
+        {
+            var found = KeyframesForObj(obj).transform.FindChild(snap.Time().ToString())?.gameObject;
+
+            if (found == null)
+            {
+                found = new GameObject(snap.Time().ToString());
+                found.transform.SetParent(KeyframesForObj(obj).transform);
+            }
+            return found;
+        }
+
+        protected static GameObject? FocusObject(GameObject obj) {
+            return obj.GetComponent<CameraRig>()?.FocusObject;
+        }
+
+        public Vector3 Focus { get => focus.position; set => focus.position = value; }
+        protected Transform focus;
+        public Vector3 Position { get => position.position; set => position.position = value; }
+        protected Transform position;
+        public String Obj;
+
+        internal GameObject? renderer;
+        internal GameObject? rendererFocus;
+        internal LineRenderer? lineNext;
+        internal LineRenderer? lineFocus;
+
+        public TrackingKeyframe() {
+            renderer = null;
+            rendererFocus = null;
+            position = new();
+            focus = new();
+            Obj = "empty";
+        }
+
+
+        /// <summary>
+        /// Renderer constructor
+        /// </summary>
+        private TrackingKeyframe(string obj, Snap snap)
+        {
+            this.Obj = obj;
+            this.snap = snap;
+
+            var parent = ParentForKeyframe(snap, obj);
+
+            var r = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            {
+                r.name = "keyframe";
+                r.transform.SetParent(parent.transform);
+                r.transform.localScale *= 0.1f;
+                r.GetComponent<Collider>().excludeLayers = ~0;
+                r.GetComponent<Collider>().includeLayers = 0;
+                r.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+
+                Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
+                {
+                    color = Color.blue
+                };
+                r.GetComponent<Renderer>().material = mat;
+
+                renderer = r;
+
+                position = renderer.transform;
+
+                Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
+            }
+            
+            {
+                var f = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                f.name = "focus";
+                f.transform.SetParent(parent.transform);
+                f.transform.localScale *= 0.02f;
+                f.GetComponent<Collider>().excludeLayers = ~0;
+                f.GetComponent<Collider>().includeLayers = 0;
+                f.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+
+                Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
+                {
+                    color = Color.softYellow
+                };
+                f.GetComponent<Renderer>().material = mat;
+
+                rendererFocus = f;
+
+                focus = rendererFocus.transform;
+
+                Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
+            }
+
+            {
+                var lineNextObj = new GameObject("lineNext");
+                lineNextObj.transform.SetParent(parent.transform);
+                lineNext = lineNextObj.AddComponent<LineRenderer>();
+                lineNext.material = Core.DottedLineMat;
+                lineNext.widthMultiplier = 0.01f;
+                lineNext.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+            }
+
+            {
+                var lineFocusObj = new GameObject("lineFocus");
+                lineFocusObj.transform.SetParent(parent.transform);
+                lineFocus = lineFocusObj.AddComponent<LineRenderer>();
+                lineFocus.material = Core.DottedLineMat;
+                lineFocus.widthMultiplier = 0.002f;
+                lineFocus.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+            }
+        }
+
+        /// <summary>
+        /// Capturing constructor
+        /// </summary>
+        public TrackingKeyframe(GameObject obj) : this(obj.name, new Snap(ReplayAPI.CurrentTime))
+        {
+            Position = obj.transform.position;
+            Focus = FocusObject(obj)?.transform.position ?? (obj.transform.position + obj.transform.forward);
+        }
+
+        public override Keyframe Capture(GameObject obj)
+        {
+            return new TrackingKeyframe(obj);
+        }
+
+        public override void Apply(GameObject obj, float time)
+        {
+            var next = Next(obj.GetComponent<KeyframedObject>(), snap, this)!;
+            var f = Vector3.Lerp(Focus, next.Focus, tValue(next, time));
+            var p = Vector3.Lerp(Position, next.Position, tValue(next, time));
+
+            obj.transform.position = p;
+            obj.transform.LookAt(f, Vector3.up);
+            
+            var focusObj = FocusObject(obj);
+            if (focusObj != null)
+            {
+                focusObj.transform.position = f;
+            }
+        }
+
+        void UpdateRenderer(bool _oldvalue, bool enabled) {
+            renderer?.SetActive(enabled);
+            lineNext?.gameObject.SetActive(enabled);
+            lineFocus?.gameObject.SetActive(enabled);
+        }
+
+        void RenderInternal(TrackingKeyframe? next)
+        {
+            if (next != null)
+            {
+                lineNext?.SetPositions(new Vector3[2] { Position, next.Position});
+                lineNext?.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+            }
+            lineFocus?.SetPositions(new Vector3[2] { Position, Focus });
+            lineFocus?.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+        }
+
+        public override void Render(KeyframedObject keys)
+        {
+            TrackingKeyframe? next = (TrackingKeyframe?)Next(typeof(TrackingKeyframe), keys, snap);
+            RenderInternal(next);
+        }
+
+        public override void Remove()
+        {
+            if (renderer != null) {
+                UnityEngine.Object.DestroyObject(renderer);
+                UnityEngine.Object.DestroyObject(rendererFocus);
+                UnityEngine.Object.DestroyObject(lineFocus);
+                UnityEngine.Object.DestroyObject(lineNext);
+                Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
+            }
+        }
+
+         public override void Move(GameObject obj, float time)
+        {
+            /// keep the renderer alive while moving
+            var renderer = this.renderer;
+            /// mark it null so nothing else gets deleted
+            this.renderer = null;
+            var keys = obj.GetComponent<KeyframedObject>();
+            keys.Remove(this);
+            snap = new Snap(time);
+            keys.Add(this);
+            this.renderer = renderer;
+            if (this.renderer != null) {
+                this.renderer.name = snap.Time().ToString();
+            }
+        }
+
+        [Newtonsoft.Json.JsonConstructor]
+        public TrackingKeyframe(String obj, Snap snap, Vector3 Position, Vector3 Focus) : this(obj, snap)
+        {
+            this.Position = Position;
+            this.Focus = Focus;
+            this.Obj = obj;
+        }
+    }
+
     public class RotationKeyFrame : Keyframe
     {
         [JsonProperty]
