@@ -110,7 +110,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
                 float t = i / (float)PointsAlong.Length;
                 PointsAlong[i] = Qerp(this, next, t);
             }
-            spline?.gameObject.SetActive(Core.Settings.RenderBezierWidgets.Value);
+            spline?.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
         }
         else
         {
@@ -158,7 +158,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             r.transform.localScale *= 0.1f;
             r.GetComponent<Collider>().excludeLayers = ~0;
             r.GetComponent<Collider>().includeLayers = 0;
-            r.SetActive(Core.Settings.RenderBezierWidgets.Value);
+            r.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
 
             Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
             {
@@ -172,7 +172,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             // renderer.transform.rotation = handle?.rotation ?? Quaternion.identity;
             handle = renderer.transform;
 
-            Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
+            Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
         }
 
         {
@@ -182,7 +182,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             pre.transform.localScale *= 0.1f;
             pre.GetComponent<Collider>().excludeLayers = ~0;
             pre.GetComponent<Collider>().includeLayers = 0;
-            pre.SetActive(Core.Settings.RenderBezierWidgets.Value);
+            pre.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
 
             Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
             {
@@ -208,7 +208,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             post.transform.localScale *= 0.1f;
             post.GetComponent<Collider>().excludeLayers = ~0;
             post.GetComponent<Collider>().includeLayers = 0;
-            post.SetActive(Core.Settings.RenderBezierWidgets.Value);
+            post.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
 
             Material mat = new(Shader.Find("Universal Render Pipeline/Unlit"))
             {
@@ -233,7 +233,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
             spline = spl.AddComponent<LineRenderer>();
             spline.material = Core.DottedLineMat;
             spline.widthMultiplier = 0.01f;
-            spline.gameObject.SetActive(Core.Settings.RenderBezierWidgets.Value);
+            spline.gameObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
         }
     }
 
@@ -301,7 +301,7 @@ class BezierKeyframe : KeyframedObject.Keyframe
     public override void Remove() {
         if (renderer != null) {
             UnityEngine.Object.DestroyObject(renderer);
-            Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
+            Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
         }
     }
 

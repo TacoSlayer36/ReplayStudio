@@ -33,8 +33,8 @@ public class CameraRig : MonoBehaviour
         FocusObject.transform.localScale *= 0.3f;
         FocusObject.GetComponent<Collider>().excludeLayers = ~0;
         FocusObject.GetComponent<Collider>().includeLayers = 0;
-        FocusObject.SetActive(Core.Settings.RenderBezierWidgets.Value);
-        Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
+        FocusObject.SetActive(Core.Settings.RenderKeyframeWidgets.Value);
+        Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Subscribe(UpdateRenderer);
     }
 
     public void RemoveFocusObject() {
@@ -47,7 +47,7 @@ public class CameraRig : MonoBehaviour
     }
 
     void OnDestroy() {
-        Core.Settings.RenderBezierWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
+        Core.Settings.RenderKeyframeWidgets.OnEntryValueChanged.Unsubscribe(UpdateRenderer);
         RemoveFocusObject();
     }
 

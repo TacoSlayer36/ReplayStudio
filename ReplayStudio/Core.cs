@@ -50,7 +50,7 @@ public class Core : MelonMod
         internal const string USER_DATA = "UserData/ReplayStudio/Settings/";
         internal const string CONFIG_FILE = "config.cfg";
 
-        public static MelonPreferences_Entry<bool> RenderBezierWidgets;
+        public static MelonPreferences_Entry<bool> RenderKeyframeWidgets;
         public static MelonPreferences_Entry<int> SplineResolution;
     }
 
@@ -72,7 +72,7 @@ public class Core : MelonMod
         string configPath = Path.Combine(Settings.USER_DATA, Settings.CONFIG_FILE);
         var tmpCategory = MelonPreferences.CreateCategory("tmp");
         tmpCategory.SetFilePath(configPath);
-        Settings.RenderBezierWidgets = tmpCategory.CreateEntry("ReplayStudio-RenderBezierWidgets", true, "Render Bezier Widgets", "Render the handle widgets for Bezier keyframes");
+        Settings.RenderKeyframeWidgets = tmpCategory.CreateEntry("ReplayStudio-RenderKeyframeWidgets", true, "Render Keyframe Widgets", "Render the handle widgets for keyframes");
         Settings.SplineResolution = tmpCategory.CreateEntry("ReplayStudio-SplineResolution", 10, "Spline Resolution", "The amount of steps used to render each spline");
 
         UI.RegisterMelon(this, tmpCategory);
