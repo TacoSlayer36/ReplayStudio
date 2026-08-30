@@ -127,9 +127,13 @@ internal static class UIManager
         TransformRefs["DOFDistanceSlider"]?.GetComponent<Slider>()?.onValueChanged?.AddListener((System.Action<float>)OnDOFDistanceSliderEdited);
 
         TransformRefs["PrevFrameButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPrevFrameButtonClicked);
+        _ = TransformRefs["PrevKeyframeButton"]?.GetComponent<Button>() && (TransformRefs["PrevKeyframeButton"].GetComponent<Button>().interactable = true);
+        TransformRefs["PrevKeyframeButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPrevMarkerButtonClicked);
         TransformRefs["PlayButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPlayButtonClicked);
         TransformRefs["PlayReverseButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPlayReverseButtonClicked);
         TransformRefs["NextFrameButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnNextFrameButtonClicked);
+        _ = TransformRefs["NextKeyframeButton"]?.GetComponent<Button>() && (TransformRefs["NextKeyframeButton"].GetComponent<Button>().interactable = true);
+        TransformRefs["NextKeyframeButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnNextMarkerButtonClicked);
         TransformRefs["PauseButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnPauseButtonClicked);
 
         TransformRefs["FineFastButton"]?.GetComponent<Button>().onClick?.AddListener((System.Action)OnFineFastClicked);
@@ -377,6 +381,12 @@ internal static class UIManager
         ReplayAPI.Seek(ReplayAPI.CurrentTime - 1 / Core.FPS);
     }
 
+    public static void OnPrevMarkerButtonClicked()
+    {
+        TimelineController.Instance.SnapToPrevious(ReplayAPI.CurrentTime);
+    }
+
+
     public static void OnPlayButtonClicked()
     {
         ReplayAPI.SetSpeed(Math.Abs(ReplayMod.Core.Main.Playback.playbackSpeed));
@@ -398,6 +408,12 @@ internal static class UIManager
     {
         ReplayAPI.Seek(ReplayAPI.CurrentTime + 1 / Core.FPS);
     }
+
+    public static void OnNextMarkerButtonClicked()
+    {
+        TimelineController.Instance.SnapToNext(ReplayAPI.CurrentTime);
+    }
+
 
     static void OnFineFastClicked()
     {

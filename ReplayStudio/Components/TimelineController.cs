@@ -379,6 +379,56 @@ public partial class TimelineController : MonoBehaviour
 					obj.GetComponent<KeyframedObject>()?.Redraw(keyframe);
 	}
 
+	public void SnapToNext(float time)
+	{
+		var snap = new KeyframedObject.Keyframe.Snap(time);
+
+		var next = new KeyframedObject.Keyframe.Snap(ClipLength);
+
+
+		foreach (var keySnap in keyframes.Keys)
+		{
+			if (keySnap > snap && keySnap < next)
+			{
+				next = keySnap;	
+			}
+		}
+
+		foreach (var marker in markers)
+		{
+			if (marker.Snap > snap && marker.Snap < next)
+			{
+				next = marker.Snap;
+			}
+		}
+		ReplayAPI.Seek(next.Time());
+	}
+
+	public void SnapToPrevious(float time)
+	{
+		var snap = new KeyframedObject.Keyframe.Snap(time);
+
+		var next = new KeyframedObject.Keyframe.Snap(0f);
+
+
+		foreach (var keySnap in keyframes.Keys)
+		{
+			if (keySnap < snap && keySnap > next)
+			{
+				next = keySnap;	
+			}
+		}
+
+		foreach (var marker in markers)
+		{
+			if (marker.Snap < snap && marker.Snap > next)
+			{
+				next = marker.Snap;
+			}
+		}
+		ReplayAPI.Seek(next.Time());
+	}
+
 	public void DeletePrevKeyframeMarker() {
 		var snap = new KeyframedObject.Keyframe.Snap(ReplayAPI.CurrentTime);
 		var toDelete = new List<KeyframeMarker>(keyframes.LastOrDefault((t) => t.Key <= snap && t.Value.Count != 0).Value);
@@ -488,6 +538,8 @@ public partial class TimelineController : MonoBehaviour
 
 	public class ReplayMarker
 	{
+		public KeyframedObject.Keyframe.Snap Snap;
+
 		private TimelineController timelineController;
 
 		private GameObject markerIcon;
@@ -499,6 +551,7 @@ public partial class TimelineController : MonoBehaviour
 		{
 			this.timelineController = timelineController;
 			this.parentMarker = parentMarker;
+			this.Snap = new(parentMarker.time);
 
 			InitializeRenderer();
 		}
