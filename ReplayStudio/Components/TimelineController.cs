@@ -184,7 +184,7 @@ public partial class TimelineController : MonoBehaviour
 
 		// Scrubbing
 		RectTransform rct = scrubber?.GetComponent<RectTransform>();
-		if (rct != null && ReplayMod.Core.Main.Playback.isPlaying)
+		if (rct != null && ReplayMod.Core.Main.Playback.isReplayActive)
 		{
 			Vector2 scrubberPos = rct.anchoredPosition;
 			bool scrubbingNow = viewportMouseDetector.HeldFromHovering;
