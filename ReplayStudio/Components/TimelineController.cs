@@ -56,6 +56,7 @@ public partial class TimelineController : MonoBehaviour
 	public float ScrollMult = 0.2f;
 
 	public float Scroll = 0f;
+	public bool IsHovering => (viewportMouseDetector?.IsHovering ?? false) || (viewportMouseDetector?.HeldFromHovering ?? false);
 	private float zoom
 	{
 		get
@@ -78,7 +79,6 @@ public partial class TimelineController : MonoBehaviour
 	private int unitScroll => (int)Mathf.Floor(Scroll / segmentDuration);
 	private float localScroll => Scroll - unitScroll * segmentDuration;
 
-	private bool hovering => (viewportMouseDetector?.IsHovering ?? false) || (viewportMouseDetector?.HeldFromHovering ?? false);
 
 	private RectTransform rectTransform;
 	private MouseDetector viewportMouseDetector;
@@ -121,7 +121,7 @@ public partial class TimelineController : MonoBehaviour
 
 	void Update()
 	{
-		if (hovering && !UIManager.IsInputBlocked)
+		if (IsHovering && !UIManager.IsInputBlocked)
 		{
 			float newFocus = viewportMouseDetector.GetNormalizedHoverPos().x;
 			float offset = (newFocus - FocusPos) * maxVisibleSegments / TargetZoom;

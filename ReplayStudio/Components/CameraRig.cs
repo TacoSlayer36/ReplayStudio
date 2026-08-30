@@ -52,7 +52,12 @@ public class CameraRig : MonoBehaviour
     }
 
     void Update() {
-        if (!UIManager.IsHoveringAny && CameraController.DoMapping && FocusObject != null && Input.mouseScrollDelta.y != 0) {
+        if (!UIManager.IsHoveringAny
+            && HelperFunctions.IsPressingAny(HelperFunctions.AltKeys)
+            && CameraController.DoMapping
+            && FocusObject != null
+            && Input.mouseScrollDelta.y != 0)
+        {
             FocusObject.transform.Translate(Vector3.back * Input.mouseScrollDelta.y);
         }
     }

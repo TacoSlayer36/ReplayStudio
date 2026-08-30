@@ -62,7 +62,8 @@ internal static class UIManager
         }
     }
     public static bool IsUEOpen => UECanvas?.active ?? false;
-    public static bool IsInputBlocked => IsTypingAny || IsUEOpen; // TODO: Maybe also include IsHoveringAny
+    
+    public static bool IsInputBlocked => IsTypingAny;
 
     public static bool ViewingOtherPOV => ReplayPlayback.povPlayer != null && ReplayPlayback.povPlayer != PlayerManager.Instance?.LocalPlayer;
 

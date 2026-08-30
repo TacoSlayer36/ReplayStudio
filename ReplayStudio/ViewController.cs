@@ -167,42 +167,44 @@ public static class ViewController
 
 		float sprintMult = IsPressingAny(SprintKeys) ? 4f : 1f; // TODO: Make this configurable
 
+		// Lateral movement is based in local space
 		Vector3 moveDir = Vector3.zero;
 
 		Vector3 forward = Quaternion.Euler(0f, ViewRot.y, 0f) * new Vector3(0, 0, 1);
 		Vector3 right = Quaternion.Euler(0f, ViewRot.y, 0f) * new Vector3(1, 0, 0);
 
-		// Lateral movement is based in local space
-		if (IsPressingAny(ForwardKeys))
-			moveDir += forward;
+		// Vertical movement is based in world space
+		float verticalMoveAmount = 0f;
 
-		if (IsPressingAny(BackwardKeys) && !IsPressingAny(ShiftKeys))
-			moveDir += -forward;
+		if (isViewUnlocked)
+		{
+			if (IsPressingAny(ForwardKeys))
+				moveDir += forward;
 
-		if (IsPressingAny(RightKeys))
-			moveDir += right;
+			if (IsPressingAny(BackwardKeys) && !IsPressingAny(ShiftKeys))
+				moveDir += -forward;
 
-		if (IsPressingAny(LeftKeys))
-			moveDir += -right;
+			if (IsPressingAny(RightKeys))
+				moveDir += right;
 
-		if (Input.mouseScrollDelta.y != 0)
+			if (IsPressingAny(LeftKeys))
+				moveDir += -right;
+			if (IsPressingAny(UpKeys))
+				verticalMoveAmount += 1f;
+
+			if (IsPressingAny(DownKeys))
+				verticalMoveAmount += -1f;
+		}
+
+		Vector3 lateralMoveDir = new Vector3(moveDir.x, 0f, moveDir.z).normalized;
+		Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
+
+		
+		if (Input.mouseScrollDelta.y != 0 && !IsPressingAny(AltKeys) )
 		{
 			ViewPosSpeedMult = Mathf.Pow(10, Math.Clamp(Mathf.Log(ViewPosSpeedMult, 10) + Input.mouseScrollDelta.y * 0.05f, -1, 0.75f));
 			ViewRotSpeedMult = ViewPosSpeedMult * 1.2f;
 		}
-
-		Vector3 lateralMoveDir = new Vector3(moveDir.x, 0f, moveDir.z).normalized;
-
-		// Vertical movement is based in world space
-		float verticalMoveAmount = 0f;
-
-		if (IsPressingAny(UpKeys))
-			verticalMoveAmount += 1f;
-
-		if (IsPressingAny(DownKeys))
-			verticalMoveAmount += -1f;
-
-		Vector3 moveAmount = lateralMoveDir + Vector3.up * verticalMoveAmount;
 
 		float mouseX = isViewUnlocked ? Input.GetAxis("Mouse X") * ViewSensitivity * ViewRotSpeedMult : 0;
 		float mouseY = isViewUnlocked ? Input.GetAxis("Mouse Y") * ViewSensitivity * ViewRotSpeedMult : 0;

@@ -131,16 +131,20 @@ public class Core : MelonMod
                 ReplayMod.Core.Main.Playback.TogglePlayback(ReplayMod.Core.Main.Playback.isPaused);
             }
 
-            if (Input.GetKeyDown(KeyCode.Delete)) {
-                TimelineController.Instance.DeletePrevKeyframeMarker();
-                SaveStudioData();
-            }
-
-
-            if (Input.GetKeyDown(KeyCode.I))
+            if (TimelineController.Instance.IsHovering)
             {
-                CameraController.KeyframeComponent.Capture<TrackingBezierKeyframe, KeyframedObject.FovKeyFrame>();
-                SaveStudioData();
+                if (Input.GetKeyDown(KeyCode.Delete))
+                {
+                    TimelineController.Instance.DeletePrevKeyframeMarker();
+                    SaveStudioData();
+                }
+
+
+                if (Input.GetKeyDown(KeyCode.I))
+                {
+                    CameraController.KeyframeComponent.Capture<TrackingBezierKeyframe, KeyframedObject.FovKeyFrame>();
+                    SaveStudioData();
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.Insert) || Input.GetKeyDown(KeyCode.Keypad0))
