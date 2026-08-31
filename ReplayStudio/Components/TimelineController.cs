@@ -239,14 +239,14 @@ public partial class TimelineController : MonoBehaviour
 		}
 
 		Vector2 leftSize = leftMargin.sizeDelta;
-		if (ReplayMod.Replay.ReplayAPI.IsPlaying)
+		if (ReplayAPI.IsReplayActive)
 			leftSize.x = Mathf.Clamp(DurationToTimelinePos(0f) * Screen.width, 0f, Screen.width);
 		else
 			leftSize.x = Screen.width;
 		leftMargin.sizeDelta = leftSize;
 
 		Vector2 rightSize = leftMargin.sizeDelta;
-		if (ReplayMod.Replay.ReplayAPI.IsPlaying)
+		if (ReplayAPI.IsReplayActive)
 			rightSize.x = Mathf.Clamp(Screen.width - DurationToTimelinePos(ClipLength) * Screen.width, 0f, Screen.width);
 		else
 			rightSize.x = Screen.width;
@@ -447,7 +447,7 @@ public partial class TimelineController : MonoBehaviour
 	{
 		clearMarkers();
 		if (ReplayMod.Replay.ReplayAPI.CurrentReplay?.Header?.Markers == null) return;
-		if (!ReplayMod.Replay.ReplayAPI.IsPlaying) return;
+		if (!ReplayAPI.IsReplayActive) return;
 
 		foreach (ReplayMod.Replay.Serialization.Marker replayMarker in ReplayMod.Replay.ReplayAPI.CurrentReplay.Header.Markers)
 		{

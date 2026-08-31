@@ -133,7 +133,7 @@ public class Core : MelonMod
         if (!UIManager.IsHoveringAny)
             CameraController.HandleCamera();
 
-        if (ReplayAPI.IsPlaying && !UIManager.IsInputBlocked)
+        if (ReplayAPI.IsReplayActive && !UIManager.IsInputBlocked)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {

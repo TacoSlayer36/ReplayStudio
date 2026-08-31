@@ -41,7 +41,7 @@ public static class Rendering
 
     public static void Render()
     {
-        if (!ReplayAPI.IsPlaying) return;
+        if (!ReplayAPI.IsReplayActive) return;
         renderRoutine = MelonCoroutines.Start(_());
 
         IEnumerator _()

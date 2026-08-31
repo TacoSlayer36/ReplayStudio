@@ -9,6 +9,7 @@ using Il2CppRUMBLE.Players;
 using System;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using ReplayMod.Replay;
 
 namespace ReplayStudio;
 
@@ -269,7 +270,7 @@ public static class ViewController
 
 		SetPlayer(true);
 
-		if (ReplayMod.Replay.ReplayAPI.IsPlaying)
+		if (ReplayAPI.IsReplayActive)
 			ReplayMod.Core.Main.Playback?.UpdateReplayCameraPOV(PlayerManager.Instance.LocalPlayer);
 	}
 
